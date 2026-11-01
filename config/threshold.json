@@ -1,0 +1,7 @@
+{
+  "threshold": 0.85,
+  "selected_on": "data/own/dev.json",
+  "probe": "results/threshold_probe_20261101_022045.json",
+  "rule": "smallest of GRID with 100% precision on kept dev answers (benchmark/select_threshold.py)",
+  "selected_at": "2026-11-01T02:21:10"
+}
