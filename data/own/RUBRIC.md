@@ -1,6 +1,6 @@
 # Evaluation set rubric (own / openly licensed data)
 
-**Status: DRAFT. Finalize and commit before any model run on these images.**
+**Status: final. Committed in `1f5a548` before any model run; unchanged since.**
 
 ## Task
 One image in, one jersey number out. Prompt and scoring are unchanged from `benchmark/run_benchmark.py`.
