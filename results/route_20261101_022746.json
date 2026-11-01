@@ -1,0 +1,777 @@
+{
+  "policy": "confidence",
+  "threshold": 0.85,
+  "max_tier": 1,
+  "manifest": "data/own/heldout.json",
+  "records": [
+    {
+      "image": "wm_001.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "13",
+          "latency_s": 1.259,
+          "raw": "13",
+          "conf": 0.6804
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.6804,
+        "min": 0.7713,
+        "margin": 0.6553,
+        "n_digit_tokens": 2
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "13",
+      "reason": "LOW CONFIDENCE: edge confidence 0.680 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 1.328,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "13",
+      "correct": true
+    },
+    {
+      "image": "wm_002.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "30",
+          "latency_s": 0.984,
+          "raw": "30",
+          "conf": 0.9932
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.9932,
+        "min": 0.994,
+        "margin": 0.9917,
+        "n_digit_tokens": 2
+      },
+      "tier": 1,
+      "answer": "30",
+      "reason": "edge confidence 0.993 >= 0.85",
+      "confident": true,
+      "left_device": false,
+      "total_s": 1.077,
+      "policy": "confidence",
+      "truth": "30",
+      "correct": true
+    },
+    {
+      "image": "wm_004.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "24",
+          "latency_s": 0.972,
+          "raw": "24",
+          "conf": 0.4589
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.4589,
+        "min": 0.6452,
+        "margin": 0.5385,
+        "n_digit_tokens": 2
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "24",
+      "reason": "LOW CONFIDENCE: edge confidence 0.459 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 1.0,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "22|24",
+      "correct": true
+    },
+    {
+      "image": "wm_005.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "2",
+          "latency_s": 0.964,
+          "raw": "2",
+          "conf": 0.4082
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.4082,
+        "min": 0.4082,
+        "margin": 0.1213,
+        "n_digit_tokens": 1
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "2",
+      "reason": "LOW CONFIDENCE: edge confidence 0.408 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 1.117,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "13",
+      "correct": false
+    },
+    {
+      "image": "wm_006.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "23",
+          "latency_s": 1.009,
+          "raw": "23",
+          "conf": 0.1524
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.1524,
+        "min": 0.3367,
+        "margin": 0.0809,
+        "n_digit_tokens": 2
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "23",
+      "reason": "LOW CONFIDENCE: edge confidence 0.152 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 1.042,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "53|32",
+      "correct": false
+    },
+    {
+      "image": "wm_008.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "24",
+          "latency_s": 0.952,
+          "raw": "24",
+          "conf": 0.5408
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.5408,
+        "min": 0.6879,
+        "margin": 0.6739,
+        "n_digit_tokens": 2
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "24",
+      "reason": "LOW CONFIDENCE: edge confidence 0.541 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 0.973,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "24|34",
+      "correct": true
+    },
+    {
+      "image": "wm_009.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "23",
+          "latency_s": 0.956,
+          "raw": "23",
+          "conf": 0.5095
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.5095,
+        "min": 0.5542,
+        "margin": 0.8924,
+        "n_digit_tokens": 2
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "23",
+      "reason": "LOW CONFIDENCE: edge confidence 0.509 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 0.989,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "23",
+      "correct": true
+    },
+    {
+      "image": "wm_011.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "14",
+          "latency_s": 0.947,
+          "raw": "14",
+          "conf": 0.5508
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.5508,
+        "min": 0.6586,
+        "margin": 0.7719,
+        "n_digit_tokens": 2
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "14",
+      "reason": "LOW CONFIDENCE: edge confidence 0.551 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 0.991,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "14",
+      "correct": true
+    },
+    {
+      "image": "wm_012.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "35",
+          "latency_s": 0.967,
+          "raw": "35",
+          "conf": 0.3521
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.3521,
+        "min": 0.5525,
+        "margin": 0.535,
+        "n_digit_tokens": 2
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "35",
+      "reason": "LOW CONFIDENCE: edge confidence 0.352 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 0.994,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "47|35|5",
+      "correct": true
+    },
+    {
+      "image": "wm_013.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "11",
+          "latency_s": 1.017,
+          "raw": "11",
+          "conf": 0.9604
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.9604,
+        "min": 0.9683,
+        "margin": 0.96,
+        "n_digit_tokens": 2
+      },
+      "tier": 1,
+      "answer": "11",
+      "reason": "edge confidence 0.960 >= 0.85",
+      "confident": true,
+      "left_device": false,
+      "total_s": 1.067,
+      "policy": "confidence",
+      "truth": "11|9",
+      "correct": true
+    },
+    {
+      "image": "wm_014.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "10",
+          "latency_s": 0.968,
+          "raw": "10",
+          "conf": 0.0731
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.0731,
+        "min": 0.2593,
+        "margin": 0.0365,
+        "n_digit_tokens": 2
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "10",
+      "reason": "LOW CONFIDENCE: edge confidence 0.073 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 0.999,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "14",
+      "correct": false
+    },
+    {
+      "image": "wm_016.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "24",
+          "latency_s": 0.967,
+          "raw": "24",
+          "conf": 0.3855
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.3855,
+        "min": 0.5686,
+        "margin": 0.4878,
+        "n_digit_tokens": 2
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "24",
+      "reason": "LOW CONFIDENCE: edge confidence 0.386 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 0.999,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "15",
+      "correct": false
+    },
+    {
+      "image": "wm_018.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "2",
+          "latency_s": 0.921,
+          "raw": "2",
+          "conf": 0.5907
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.5907,
+        "min": 0.5907,
+        "margin": 0.3967,
+        "n_digit_tokens": 1
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "2",
+      "reason": "LOW CONFIDENCE: edge confidence 0.591 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 0.982,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "21|23",
+      "correct": false
+    },
+    {
+      "image": "wm_019.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "3",
+          "latency_s": 0.97,
+          "raw": "3",
+          "conf": 0.2412
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.2412,
+        "min": 0.2412,
+        "margin": 0.0015,
+        "n_digit_tokens": 1
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "3",
+      "reason": "LOW CONFIDENCE: edge confidence 0.241 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 1.022,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "95",
+      "correct": false
+    },
+    {
+      "image": "wm_021.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "11",
+          "latency_s": 0.961,
+          "raw": "11",
+          "conf": 0.6934
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.6934,
+        "min": 0.7948,
+        "margin": 0.816,
+        "n_digit_tokens": 2
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "11",
+      "reason": "LOW CONFIDENCE: edge confidence 0.693 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 1.009,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "11|41",
+      "correct": true
+    },
+    {
+      "image": "wm_022.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "6",
+          "latency_s": 0.916,
+          "raw": "6",
+          "conf": 0.6511
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.6511,
+        "min": 0.6511,
+        "margin": 0.5732,
+        "n_digit_tokens": 1
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "6",
+      "reason": "LOW CONFIDENCE: edge confidence 0.651 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 0.955,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "6|55",
+      "correct": true
+    },
+    {
+      "image": "wm_024.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "2",
+          "latency_s": 0.908,
+          "raw": "2",
+          "conf": 0.5405
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.5405,
+        "min": 0.5405,
+        "margin": 0.3839,
+        "n_digit_tokens": 1
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "2",
+      "reason": "LOW CONFIDENCE: edge confidence 0.540 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 0.939,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "6|21",
+      "correct": false
+    },
+    {
+      "image": "wm_026.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "2",
+          "latency_s": 0.909,
+          "raw": "2",
+          "conf": 0.3186
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.3186,
+        "min": 0.3186,
+        "margin": 0.1267,
+        "n_digit_tokens": 1
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "2",
+      "reason": "LOW CONFIDENCE: edge confidence 0.319 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 0.959,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "20",
+      "correct": false
+    },
+    {
+      "image": "wm_027.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "14",
+          "latency_s": 1.018,
+          "raw": "14",
+          "conf": 0.7614
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.7614,
+        "min": 0.8004,
+        "margin": 0.6476,
+        "n_digit_tokens": 2
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "14",
+      "reason": "LOW CONFIDENCE: edge confidence 0.761 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 1.047,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "40",
+      "correct": false
+    },
+    {
+      "image": "wm_028.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "15",
+          "latency_s": 0.97,
+          "raw": "15",
+          "conf": 0.0668
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.0668,
+        "min": 0.2178,
+        "margin": 0.0009,
+        "n_digit_tokens": 2
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "15",
+      "reason": "LOW CONFIDENCE: edge confidence 0.067 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 1.007,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "32",
+      "correct": false
+    },
+    {
+      "image": "wm_029.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "24",
+          "latency_s": 1.015,
+          "raw": "24",
+          "conf": 0.4077
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.4077,
+        "min": 0.568,
+        "margin": 0.6111,
+        "n_digit_tokens": 2
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "24",
+      "reason": "LOW CONFIDENCE: edge confidence 0.408 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 1.083,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "24",
+      "correct": true
+    },
+    {
+      "image": "wm_033.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "3",
+          "latency_s": 0.97,
+          "raw": "3",
+          "conf": 0.5689
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.5689,
+        "min": 0.5689,
+        "margin": 0.3488,
+        "n_digit_tokens": 1
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "3",
+      "reason": "LOW CONFIDENCE: edge confidence 0.569 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 0.998,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "33",
+      "correct": false
+    },
+    {
+      "image": "wm_034.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "9",
+          "latency_s": 0.911,
+          "raw": "9",
+          "conf": 0.4967
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.4967,
+        "min": 0.4967,
+        "margin": 0.3921,
+        "n_digit_tokens": 1
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "9",
+      "reason": "LOW CONFIDENCE: edge confidence 0.497 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 0.945,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "9",
+      "correct": true
+    },
+    {
+      "image": "wm_036.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "3",
+          "latency_s": 0.909,
+          "raw": "3",
+          "conf": 0.8808
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.8808,
+        "min": 0.8808,
+        "margin": 0.7886,
+        "n_digit_tokens": 1
+      },
+      "tier": 1,
+      "answer": "3",
+      "reason": "edge confidence 0.881 >= 0.85",
+      "confident": true,
+      "left_device": false,
+      "total_s": 0.947,
+      "policy": "confidence",
+      "truth": "32",
+      "correct": false
+    },
+    {
+      "image": "wm_039.jpg",
+      "steps": [
+        {
+          "step": "edge_full",
+          "pred": "3",
+          "latency_s": 0.968,
+          "raw": "3",
+          "conf": 0.4467
+        }
+      ],
+      "sam3_calls": 0,
+      "muse_calls": 0,
+      "edge_conf": {
+        "joint": 0.4467,
+        "min": 0.4467,
+        "margin": 0.3117,
+        "n_digit_tokens": 1
+      },
+      "needs_queue": true,
+      "tier": 1,
+      "answer": "3",
+      "reason": "LOW CONFIDENCE: edge confidence 0.447 < 0.85, offline; queued for verification",
+      "confident": false,
+      "left_device": false,
+      "total_s": 1.0,
+      "policy": "confidence",
+      "queued": true,
+      "truth": "31",
+      "correct": false
+    }
+  ]
+}
