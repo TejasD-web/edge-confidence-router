@@ -442,3 +442,15 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# Alternates: truth "22|24" = any listed number counts as correct (rule in data/own/RUBRIC.md).
+_score_single = score
+
+def score(raw, truth):
+    alts = [t.strip() for t in str(truth).split("|") if t.strip()]
+    for t in alts:
+        ok, pred = _score_single(raw, t)
+        if ok:
+            return ok, pred
+    return _score_single(raw, alts[0] if alts else str(truth))
