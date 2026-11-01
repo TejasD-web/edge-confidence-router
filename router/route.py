@@ -96,7 +96,7 @@ def sync():
             e["edge_correct"] = rb.score(e["edge_answer"] or "", e["truth"])[0]
             e["correct"] = rb.score(ans or "", e["truth"])[0]
             mark = f"  truth={e['truth']} edge {'✓' if e['edge_correct'] else '✗'} -> final {'✓' if e['correct'] else '✗'}"
-        verb = ("FIXED" if e.get("edge_correct") is False else "changed") if e["corrected"] else "confirmed"
+        verb = ("FIXED" if e.get("edge_correct") is False and e.get("correct") else "changed") if e["corrected"] else "confirmed"
         print(f"[SYNC] {e['image']}: edge {e['edge_answer']} (conf {e['edge_conf']}) -> Muse {ans}  {verb}  {t}s{mark}")
     with open(QUEUE_FILE, "w") as f:
         for e in entries:
