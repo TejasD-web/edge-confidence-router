@@ -1,0 +1,122 @@
+[
+  {
+    "image": "wm_003.jpg",
+    "truth": "33",
+    "difficulty": "medium",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Scottie_Pippen,_Chicago_Bulls_at_the_Meadowlands_Sports_Complex,_NJ,_US.jpg",
+    "author": "The Eloquent Peasant",
+    "license": "CC BY-SA 4.0"
+  },
+  {
+    "image": "wm_007.jpg",
+    "truth": "34",
+    "difficulty": "easy",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Shaun_Livingston_with_Warriors.jpg",
+    "author": "Keith Allison",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_010.jpg",
+    "truth": "30|40",
+    "difficulty": "medium",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Stephen_Curry_(24178934184).jpg",
+    "author": "Keith Allison",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_015.jpg",
+    "truth": "12|15",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:ABQthunderbirds.JPG",
+    "author": "NerdyScienceDude",
+    "license": "Public domain (author release)"
+  },
+  {
+    "image": "wm_017.jpg",
+    "truth": "41",
+    "difficulty": "medium",
+    "source_url": "https://commons.wikimedia.org/wiki/File:NowitzkiWizards1.jpg",
+    "author": "Keith Allison",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_020.jpg",
+    "truth": "10|16",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Powe_Coast_to_Coast_2008.jpg",
+    "author": "Eric Kilby",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_023.jpg",
+    "truth": "0",
+    "difficulty": "easy",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Beard_Parker_20171004.jpg",
+    "author": "SusanLesch",
+    "license": "CC BY 4.0"
+  },
+  {
+    "image": "wm_025.jpg",
+    "truth": "10|13",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:2024_WNBA_Finals_Game_1_NYL_vs._MIN_10.10.2024_29.jpg",
+    "author": "Kew Gardens 613",
+    "license": "CC BY-SA 4.0"
+  },
+  {
+    "image": "wm_030.jpg",
+    "truth": "20",
+    "difficulty": "easy",
+    "source_url": "https://commons.wikimedia.org/wiki/File:WNBA_Washington_Mystics_vs._Dallas_Wings,_Aug_26_2021_DSC05963_(51409882402).jpg",
+    "author": "All-Pro Reels",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_031.jpg",
+    "truth": "72|12",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:USC_vs_UCLA_men's_basketball_game_March_5,_1951.jpg",
+    "author": "Unknown (Los Angeles Daily News)",
+    "license": "Public domain in the US (published 1931-1977 without notice)"
+  },
+  {
+    "image": "wm_032.jpg",
+    "truth": "13",
+    "difficulty": "medium",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Steve_Nash_at_Suns_at_Warriors_3-15-09_1.JPG",
+    "author": "\u00a9 BrokenSphere / Wikimedia Commons",
+    "license": "CC BY-SA 3.0"
+  },
+  {
+    "image": "wm_035.jpg",
+    "truth": "54|8",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Kobe_free_throw_2006.jpg",
+    "author": "pragmatopian",
+    "license": "CC BY 2.0"
+  },
+  {
+    "image": "wm_037.jpg",
+    "truth": "3|6",
+    "difficulty": "medium",
+    "source_url": "https://commons.wikimedia.org/wiki/File:JuliusErvingSlamDunk1981.jpg",
+    "author": "Jim Accordino",
+    "license": "CC BY 2.0"
+  },
+  {
+    "image": "wm_038.jpg",
+    "truth": "2",
+    "difficulty": "medium",
+    "source_url": "https://commons.wikimedia.org/wiki/File:2022-07-03_Basketball,_M\u00e4nner,_European_Qualifiers,_Deutschland_-_Polen_1DX_1281_by_Stepro.jpg",
+    "author": "Steffen Pr\u00f6\u00dfdorf",
+    "license": "CC BY-SA 4.0"
+  },
+  {
+    "image": "wm_040.jpg",
+    "truth": "26|21",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Brooklyn_Nets_vs_NY_Knicks_2018-10-03_td_196_-_1st_Quarter.jpg",
+    "author": "Tdorante10",
+    "license": "CC BY-SA 4.0"
+  }
+]

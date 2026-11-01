@@ -1,0 +1,202 @@
+[
+  {
+    "image": "wm_001.jpg",
+    "truth": "13",
+    "difficulty": "easy",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Wilt_Chamberlain_of_the_Los_Angeles_Lakers_in_the_1969_NBA_World_Championship_Series.jpg",
+    "author": "Unknown author",
+    "license": "Public domain in the US (published 1931-1977 without notice)"
+  },
+  {
+    "image": "wm_002.jpg",
+    "truth": "30",
+    "difficulty": "easy",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Stephen_Curry_dribbling_2016.jpg",
+    "author": "Keith Allison",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_004.jpg",
+    "truth": "22|24",
+    "difficulty": "medium",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Chicago_Bulls_and_New_Jersey_Nets,_January_23,_1991.jpg",
+    "author": "The Eloquent Peasant",
+    "license": "CC BY-SA 4.0"
+  },
+  {
+    "image": "wm_005.jpg",
+    "truth": "13",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Hapoel_Tel_Aviv_vs_New_Jersey_Nets_(FL63617761).jpg",
+    "author": "Dan Hadani collection / National Library of Israel / The Pritzker Family National Photography Collection",
+    "license": "CC BY 4.0"
+  },
+  {
+    "image": "wm_006.jpg",
+    "truth": "53|32",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Hapoel_Tel_Aviv_vs_New_Jersey_Nets_(FL63617936).jpg",
+    "author": "Dan Hadani collection / National Library of Israel / The Pritzker Family National Photography Collection",
+    "license": "CC BY 4.0"
+  },
+  {
+    "image": "wm_008.jpg",
+    "truth": "24|34",
+    "difficulty": "easy",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Kobe_Bryant2_2014_A.jpg",
+    "author": "Keith Allison",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_009.jpg",
+    "truth": "23",
+    "difficulty": "medium",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Michael_Jordan_-_1984_(1).jpg",
+    "author": "Carmine Galasso (The Record / North Jersey Media Group)",
+    "license": "Public domain in the US (published 1978-1989 without notice, not registered)"
+  },
+  {
+    "image": "wm_011.jpg",
+    "truth": "14",
+    "difficulty": "medium",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Edu_Najera.jpg",
+    "author": "Keith Allison",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_012.jpg",
+    "truth": "47|35|5",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Tolu_Smith,_Ron_Holland,_&_Lachlan_Olbrich_01072026.jpg",
+    "author": "Pikraken",
+    "license": "CC0 1.0"
+  },
+  {
+    "image": "wm_013.jpg",
+    "truth": "11|9",
+    "difficulty": "easy",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Glen_DavisWizards.jpg",
+    "author": "Keith Allison",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_014.jpg",
+    "truth": "14",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:NBA_basketball,_Raptors_in_Phoenix.jpg",
+    "author": "Cltjames",
+    "license": "CC0 1.0"
+  },
+  {
+    "image": "wm_016.jpg",
+    "truth": "15",
+    "difficulty": "medium",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Masked_mamba.jpg",
+    "author": "Keith Allison",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_018.jpg",
+    "truth": "21|23",
+    "difficulty": "easy",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Kevin_Garnett_with_the_Minnesota_Timberwolves_dunking,_2007.jpg",
+    "author": "Keith Allison",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_019.jpg",
+    "truth": "95",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Juan_Toscano-Anderson.jpg",
+    "author": "Erik Drost",
+    "license": "CC BY 2.0"
+  },
+  {
+    "image": "wm_021.jpg",
+    "truth": "11|41",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Leon_Powe_dunk.jpg",
+    "author": "Eric Kilby",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_022.jpg",
+    "truth": "6|55",
+    "difficulty": "medium",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Andrew_Bogut_block_shot.jpg",
+    "author": "Keith Allison",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_024.jpg",
+    "truth": "6|21",
+    "difficulty": "medium",
+    "source_url": "https://commons.wikimedia.org/wiki/File:2024_WNBA_Finals_Game_1_NYL_vs._MIN_10.10.2024_27.jpg",
+    "author": "Kew Gardens 613",
+    "license": "CC BY-SA 4.0"
+  },
+  {
+    "image": "wm_026.jpg",
+    "truth": "20",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:2024_WNBA_Finals_Game_1_NYL_vs._MIN_10.10.2024_79.jpg",
+    "author": "Kew Gardens 613",
+    "license": "CC BY-SA 4.0"
+  },
+  {
+    "image": "wm_027.jpg",
+    "truth": "40",
+    "difficulty": "medium",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Strahinja_Gavrilovi\u0107,_USC_men's_basketball_vs._ucla.jpg",
+    "author": "Neon Tommy",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_028.jpg",
+    "truth": "32",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:USC\u2013UCLA_men's_basketball_game_Jan_9,_1953.jpg",
+    "author": "Unknown (Los Angeles Mirror)",
+    "license": "Public domain in the US (published 1931-1977 without notice)"
+  },
+  {
+    "image": "wm_029.jpg",
+    "truth": "24",
+    "difficulty": "medium",
+    "source_url": "https://commons.wikimedia.org/wiki/File:WNBA_-_Washington_Mystics_vs._LA_Sparks,_Aug_24_2021_219_(51402118223).jpg",
+    "author": "All-Pro Reels",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_033.jpg",
+    "truth": "33",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Basketball_Superleague_All-Star_Game_2012_(6789029948).jpg",
+    "author": "Aleksandr Osipov",
+    "license": "CC BY-SA 2.0"
+  },
+  {
+    "image": "wm_034.jpg",
+    "truth": "9",
+    "difficulty": "medium",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Euroleague_-_LE_Roma_vs_Toulouse_IC-27.jpg",
+    "author": "Pierre-Selim",
+    "license": "CC BY-SA 3.0"
+  },
+  {
+    "image": "wm_036.jpg",
+    "truth": "32",
+    "difficulty": "hard",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Shaquille_going_in_for_a_layup.jpg",
+    "author": "Jeramey Jannene (compujeramy); cropped/contrasted by Quadzilla99",
+    "license": "CC BY 2.0"
+  },
+  {
+    "image": "wm_039.jpg",
+    "truth": "31",
+    "difficulty": "easy",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Shavon_Shields_31_Fenerbah\u00e7e_Basketbol_Euroleague_20261015_(3).JPG",
+    "author": "Zafer",
+    "license": "CC BY-SA 4.0"
+  }
+]
