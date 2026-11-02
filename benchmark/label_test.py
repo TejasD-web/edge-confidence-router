@@ -83,7 +83,14 @@ def main():
     ap.add_argument("--labels", default="data/labels/labels.csv")
     ap.add_argument("--images", default="data/labels/images")
     ap.add_argument("--muse-all", action="store_true", help="also read every image with Muse (comparison)")
+    ap.add_argument("--image-tokens", type=int, default=rb.READ_MAX_TOKENS,
+                    help="edge image budget (default 256 = pre-registered run). Anything else is EXPLORATORY "
+                         "and is reported separately. Max 1024 (llama-server --image-max-tokens).")
     args = ap.parse_args()
+    exploratory = args.image_tokens != 256
+    rb.READ_MAX_TOKENS = args.image_tokens       # prep_read() reads this module global at call time
+    print(f"[CFG] edge image budget {args.image_tokens} tokens, threshold {THRESHOLD}"
+          + ("  ** EXPLORATORY (post-hoc), not the pre-registered run **" if exploratory else ""))
 
     rows = list(csv.DictReader(open(args.labels, encoding="utf-8")))
     mem = next(int(l.split()[1]) for l in open("/proc/meminfo") if l.startswith("MemAvailable"))
@@ -136,10 +143,14 @@ def main():
     if args.muse_all:
         print(f"Muse alone:           {sum(o.get('muse_correct', False) for o in out)}/{n} correct")
     print(f"Confident errors (kept but wrong): {[o['image'] for o in kept if not o['edge_correct']]}")
-    print("n = 9, qualitative task-transfer check; threshold fixed in advance, not tuned.")
+    print(f"n = {n}, qualitative task-transfer check; threshold fixed in advance, not tuned."
+          + (f" EXPLORATORY: image budget {args.image_tokens} chosen after seeing the 256-token run." if exploratory else ""))
+    print(f"Mean edge read: {sum(o['edge_s'] for o in out) / n:.2f}s")
 
-    path = os.path.join(rb.RESULTS_DIR, f"labels_{datetime.now():%Y%m%d_%H%M%S}.json")
+    tag = f"_explore_{args.image_tokens}tok" if exploratory else ""
+    path = os.path.join(rb.RESULTS_DIR, f"labels{tag}_{datetime.now():%Y%m%d_%H%M%S}.json")
     json.dump({"prompt": LABEL_PROMPT, "threshold": THRESHOLD, "signal": "min token prob",
+               "image_tokens": args.image_tokens, "exploratory": exploratory,
                "muse_all": args.muse_all, "rows": out}, open(path, "w"), indent=2)
     print(f"[LOG] Wrote {path}")
 
