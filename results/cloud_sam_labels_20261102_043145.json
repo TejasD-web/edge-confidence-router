@@ -1,0 +1,262 @@
+{
+  "set": "labels",
+  "manifest": "data/labels/labels.csv",
+  "images": "data/labels/images",
+  "sam_prompt": "printed label or tag",
+  "read_prompt": "Read the main identifier on the label or tag in this image: a tracking number, barcode number, part number, location code, or postal code. Reply with only that identifier.",
+  "note": "EXPLORATORY (seen images); localization control for the edge reading wall",
+  "rows": [
+    {
+      "image": "px_001.jpg",
+      "truth": "W6X124953",
+      "difficulty": "hard",
+      "muse_full": {
+        "raw": "W6x12, 49S3",
+        "pred": "W6X1249S3",
+        "correct": false,
+        "s": 3.719
+      },
+      "sam": {
+        "n_boxes": 1,
+        "s": 1.023,
+        "crop_size": "2578x2988"
+      },
+      "sam_edge": {
+        "raw": "OK",
+        "pred": "OK",
+        "correct": false,
+        "s": 1.252
+      },
+      "sam_muse": {
+        "raw": "W6x12, 4953",
+        "pred": "W6X124953",
+        "correct": true,
+        "s": 1.763
+      }
+    },
+    {
+      "image": "px_002.jpg",
+      "truth": "5901234123457",
+      "difficulty": "medium",
+      "muse_full": {
+        "raw": "5901234123457",
+        "pred": "5901234123457",
+        "correct": true,
+        "s": 6.028
+      },
+      "sam": {
+        "n_boxes": 3,
+        "s": 0.8,
+        "crop_size": "2152x1960"
+      },
+      "sam_edge": {
+        "raw": "12341234578",
+        "pred": "12341234578",
+        "correct": false,
+        "s": 1.511
+      },
+      "sam_muse": {
+        "raw": "4841234567893",
+        "pred": "4841234567893",
+        "correct": false,
+        "s": 3.089
+      }
+    },
+    {
+      "image": "px_003.jpg",
+      "truth": "P54|P533|P534|P535",
+      "difficulty": "medium",
+      "muse_full": {
+        "raw": "P54",
+        "pred": "P54",
+        "correct": true,
+        "s": 4.304
+      },
+      "sam": {
+        "n_boxes": 1,
+        "s": 0.496,
+        "crop_size": "497x203"
+      },
+      "sam_edge": {
+        "raw": "P54",
+        "pred": "P54",
+        "correct": true,
+        "s": 1.219
+      },
+      "sam_muse": {
+        "raw": "P54",
+        "pred": "P54",
+        "correct": true,
+        "s": 0.764
+      }
+    },
+    {
+      "image": "px_004.jpg",
+      "truth": "B122A|7056",
+      "difficulty": "medium",
+      "muse_full": {
+        "raw": "B-12.4A",
+        "pred": "B124A",
+        "correct": false,
+        "s": 2.264
+      },
+      "sam": {
+        "n_boxes": 4,
+        "s": 2.466,
+        "crop_size": "4841x2389"
+      },
+      "sam_edge": {
+        "raw": "627",
+        "pred": "627",
+        "correct": false,
+        "s": 1.171
+      },
+      "sam_muse": {
+        "raw": "B-12.2A",
+        "pred": "B122A",
+        "correct": true,
+        "s": 1.921
+      }
+    },
+    {
+      "image": "px_005.jpg",
+      "truth": "EO000161100US",
+      "difficulty": "medium",
+      "muse_full": {
+        "raw": "EO 000 161 100 US",
+        "pred": "EO000161100US",
+        "correct": true,
+        "s": 1.618
+      },
+      "sam": {
+        "n_boxes": 3,
+        "s": 0.888,
+        "crop_size": "2168x3253"
+      },
+      "sam_edge": {
+        "raw": "632-3428",
+        "pred": "6323428",
+        "correct": false,
+        "s": 1.376
+      },
+      "sam_muse": {
+        "raw": "EO 000 161 100 US",
+        "pred": "EO000161100US",
+        "correct": true,
+        "s": 1.111
+      }
+    },
+    {
+      "image": "px_006.jpg",
+      "truth": "SW1A2AA",
+      "difficulty": "easy",
+      "muse_full": {
+        "raw": "SW1A 2AA",
+        "pred": "SW1A2AA",
+        "correct": true,
+        "s": 2.481
+      },
+      "sam": {
+        "n_boxes": 1,
+        "s": 0.946,
+        "crop_size": "2229x2496"
+      },
+      "sam_edge": {
+        "raw": "SW1A 2AA",
+        "pred": "SW1A2AA",
+        "correct": true,
+        "s": 1.275
+      },
+      "sam_muse": {
+        "raw": "SW1A 2AA",
+        "pred": "SW1A2AA",
+        "correct": true,
+        "s": 1.273
+      }
+    },
+    {
+      "image": "px_007.jpg",
+      "truth": "EC720432503US|024P0007775060",
+      "difficulty": "hard",
+      "muse_full": {
+        "raw": "AE 135 422 503 US",
+        "pred": "AE135422503US",
+        "correct": false,
+        "s": 2.854
+      },
+      "sam": {
+        "n_boxes": 1,
+        "s": 2.094,
+        "crop_size": "2000x2489"
+      },
+      "sam_edge": {
+        "raw": "1234567890",
+        "pred": "1234567890",
+        "correct": false,
+        "s": 1.427
+      },
+      "sam_muse": {
+        "raw": "024P0007775090",
+        "pred": "024P0007775090",
+        "correct": false,
+        "s": 2.278
+      }
+    },
+    {
+      "image": "px_008.jpg",
+      "truth": "EC720432503US",
+      "difficulty": "easy",
+      "muse_full": {
+        "raw": "EC 720 432 503 US",
+        "pred": "EC720432503US",
+        "correct": true,
+        "s": 1.368
+      },
+      "sam": {
+        "n_boxes": 2,
+        "s": 0.622,
+        "crop_size": "1738x1388"
+      },
+      "sam_edge": {
+        "raw": "6200000000000",
+        "pred": "6200000000000",
+        "correct": false,
+        "s": 1.564
+      },
+      "sam_muse": {
+        "raw": "EC 720 432 503 US",
+        "pred": "EC720432503US",
+        "correct": true,
+        "s": 1.558
+      }
+    },
+    {
+      "image": "px_009.jpg",
+      "truth": "12112",
+      "difficulty": "easy",
+      "muse_full": {
+        "raw": "12112",
+        "pred": "12112",
+        "correct": true,
+        "s": 2.428
+      },
+      "sam": {
+        "n_boxes": 1,
+        "s": 1.642,
+        "crop_size": "2613x2420"
+      },
+      "sam_edge": {
+        "raw": "12112",
+        "pred": "12112",
+        "correct": true,
+        "s": 1.224
+      },
+      "sam_muse": {
+        "raw": "12112",
+        "pred": "12112",
+        "correct": true,
+        "s": 1.197
+      }
+    }
+  ]
+}
