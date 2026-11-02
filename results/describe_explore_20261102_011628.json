@@ -1,0 +1,296 @@
+{
+  "prompt": "Look at this image from a robot camera. Reply with JSON only, no other text: {\"id\": \"<the main identifier on a label or tag: tracking number, barcode number, part number, location code or postal code; empty string if none is readable>\", \"id_type\": \"<tracking|barcode|part|location|postal|none>\", \"caption\": \"<one sentence, at most 15 words, describing what is in the image>\"}",
+  "threshold": 0.9,
+  "image_tokens": 256,
+  "exploratory": true,
+  "rows": [
+    {
+      "image": "px_001.jpg",
+      "truth": "W6X124953|W6X124952",
+      "facts": "steel beams;green tag;tag says OK",
+      "edge_raw": "```json\n{\n  \"id\": \"1234567890\",\n  \"id_type\": \"none\",\n  \"caption\": \"A green tag with a red cherry on a metal structure.\"\n}\n```",
+      "edge": {
+        "id": "1234567890",
+        "id_type": "none",
+        "caption": "A green tag with a red cherry on a metal structure."
+      },
+      "edge_pred": "1234567890",
+      "edge_correct": false,
+      "edge_s": 3.683,
+      "conf": {
+        "min": 0.1079,
+        "joint": 0.018,
+        "n_tokens": 10,
+        "weakest": "1"
+      },
+      "kept": false,
+      "muse_raw": "{\"id\": \"W6x12, 4953\", \"id_type\": \"part\", \"caption\": \"Green OK inspection tag tied to stacked steel beams.\"}",
+      "muse": {
+        "id": "W6x12, 4953",
+        "id_type": "part",
+        "caption": "Green OK inspection tag tied to stacked steel beams."
+      },
+      "muse_pred": "W6X124953",
+      "muse_correct": true,
+      "muse_s": 7.013,
+      "final_pred": "W6X124953",
+      "final_correct": true
+    },
+    {
+      "image": "px_002.jpg",
+      "truth": "5901234123457",
+      "facts": "cardboard box;barcodes;QR codes",
+      "edge_raw": "```json\n{\n  \"id\": \"234234234234234234234234234234234234234234234234234234234234234234234234234234234234234234234234234234234234234",
+      "edge": {
+        "id": "",
+        "id_type": "",
+        "caption": ""
+      },
+      "edge_pred": null,
+      "edge_correct": false,
+      "edge_s": 6.443,
+      "conf": {
+        "min": 0.0,
+        "joint": 0.0,
+        "n_tokens": 0,
+        "weakest": null
+      },
+      "kept": false,
+      "muse_raw": "{\"id\": \"5901234123457\", \"id_type\": \"barcode\", \"caption\": \"Cardboard shipping box with barcode and QR labels.\"}",
+      "muse": {
+        "id": "5901234123457",
+        "id_type": "barcode",
+        "caption": "Cardboard shipping box with barcode and QR labels."
+      },
+      "muse_pred": "5901234123457",
+      "muse_correct": true,
+      "muse_s": 5.129,
+      "final_pred": "5901234123457",
+      "final_correct": true
+    },
+    {
+      "image": "px_003.jpg",
+      "truth": "P54|P533|P534|P535",
+      "facts": "warehouse shelves;bins;shelf labels",
+      "edge_raw": "```json\n{\n  \"id\": \"P53.3\",\n  \"id_type\": \"part\",\n  \"caption\": \"A close-up of a metal part with a label.\"\n}\n```",
+      "edge": {
+        "id": "P53.3",
+        "id_type": "part",
+        "caption": "A close-up of a metal part with a label."
+      },
+      "edge_pred": "P533",
+      "edge_correct": true,
+      "edge_s": 2.901,
+      "conf": {
+        "min": 0.5333,
+        "joint": 0.333,
+        "n_tokens": 5,
+        "weakest": "3"
+      },
+      "kept": false,
+      "muse_raw": "{\"id\": \"P53.4\", \"id_type\": \"location\", \"caption\": \"Black storage bins labeled P53 on warehouse shelf.\"}",
+      "muse": {
+        "id": "P53.4",
+        "id_type": "location",
+        "caption": "Black storage bins labeled P53 on warehouse shelf."
+      },
+      "muse_pred": "P534",
+      "muse_correct": true,
+      "muse_s": 8.912,
+      "final_pred": "P534",
+      "final_correct": true
+    },
+    {
+      "image": "px_004.jpg",
+      "truth": "B122A|7056",
+      "facts": "package or mailer;hands;shipping label",
+      "edge_raw": "```json\n{\n  \"id\": \"1234567890\",\n  \"id_type\": \"none\",\n  \"caption\": \"Robot camera image of a blurry object.\"\n}\n```",
+      "edge": {
+        "id": "1234567890",
+        "id_type": "none",
+        "caption": "Robot camera image of a blurry object."
+      },
+      "edge_pred": "1234567890",
+      "edge_correct": false,
+      "edge_s": 2.975,
+      "conf": {
+        "min": 0.1203,
+        "joint": 0.0291,
+        "n_tokens": 10,
+        "weakest": "1"
+      },
+      "kept": false,
+      "muse_raw": "{\"id\": \"B-12.2A\", \"id_type\": \"location\", \"caption\": \"Person pushing cart with brown shipping package on top.\"}",
+      "muse": {
+        "id": "B-12.2A",
+        "id_type": "location",
+        "caption": "Person pushing cart with brown shipping package on top."
+      },
+      "muse_pred": "B122A",
+      "muse_correct": true,
+      "muse_s": 6.961,
+      "final_pred": "B122A",
+      "final_correct": true
+    },
+    {
+      "image": "px_005.jpg",
+      "truth": "EO000161100US",
+      "facts": "person holding a box;cardboard box;shipping label",
+      "edge_raw": "```json\n{\n  \"id\": \"1234567890\",\n  \"id_type\": \"barcode\",\n  \"caption\": \"Two people in red shirts holding boxes.\"\n}\n```",
+      "edge": {
+        "id": "1234567890",
+        "id_type": "barcode",
+        "caption": "Two people in red shirts holding boxes."
+      },
+      "edge_pred": "1234567890",
+      "edge_correct": false,
+      "edge_s": 3.003,
+      "conf": {
+        "min": 0.0855,
+        "joint": 0.0185,
+        "n_tokens": 10,
+        "weakest": "1"
+      },
+      "kept": false,
+      "muse_raw": "{\"id\": \"EO 000 161 100 US\", \"id_type\": \"tracking\", \"caption\": \"Person in red shirt holding cardboard box with shipping label.\"}",
+      "muse": {
+        "id": "EO 000 161 100 US",
+        "id_type": "tracking",
+        "caption": "Person in red shirt holding cardboard box with shipping label."
+      },
+      "muse_pred": "EO000161100US",
+      "muse_correct": true,
+      "muse_s": 5.844,
+      "final_pred": "EO000161100US",
+      "final_correct": true
+    },
+    {
+      "image": "px_006.jpg",
+      "truth": "SW1A2AA",
+      "facts": "cardboard box;address label;hands",
+      "edge_raw": "```json\n{\n  \"id\": \"10 Downing Street\",\n  \"id_type\": \"postal\",\n  \"caption\": \"A person holding a card with the text '10 Downing Street' and 'SW1A 2AA' on it.\"\n}\n```",
+      "edge": {
+        "id": "10 Downing Street",
+        "id_type": "postal",
+        "caption": "A person holding a card with the text '10 Downing Street' and 'SW1A 2AA' on it."
+      },
+      "edge_pred": "10DOWNINGSTREET",
+      "edge_correct": false,
+      "edge_s": 3.511,
+      "conf": {
+        "min": 0.0929,
+        "joint": 0.019,
+        "n_tokens": 4,
+        "weakest": " Downing"
+      },
+      "kept": false,
+      "muse_raw": "{\"id\": \"SW1A 2AA\", \"id_type\": \"postal\", \"caption\": \"Person holding cardboard box with shipping label.\"}",
+      "muse": {
+        "id": "SW1A 2AA",
+        "id_type": "postal",
+        "caption": "Person holding cardboard box with shipping label."
+      },
+      "muse_pred": "SW1A2AA",
+      "muse_correct": true,
+      "muse_s": 4.846,
+      "final_pred": "SW1A2AA",
+      "final_correct": true
+    },
+    {
+      "image": "px_007.jpg",
+      "truth": "EC720432503US|024P0007775060",
+      "facts": "cardboard box;shipping label;person writing",
+      "edge_raw": "```json\n{\n  \"id\": \"1234567890\",\n  \"id_type\": \"barcode\",\n  \"caption\": \"A person writing on a package label with a marker.\"\n}\n```",
+      "edge": {
+        "id": "1234567890",
+        "id_type": "barcode",
+        "caption": "A person writing on a package label with a marker."
+      },
+      "edge_pred": "1234567890",
+      "edge_correct": false,
+      "edge_s": 3.102,
+      "conf": {
+        "min": 0.1281,
+        "joint": 0.0667,
+        "n_tokens": 10,
+        "weakest": "1"
+      },
+      "kept": false,
+      "muse_raw": "{\"id\": \"RE 758 422 503 US\", \"id_type\": \"tracking\", \"caption\": \"Person writing on shipping label attached to cardboard box.\"}",
+      "muse": {
+        "id": "RE 758 422 503 US",
+        "id_type": "tracking",
+        "caption": "Person writing on shipping label attached to cardboard box."
+      },
+      "muse_pred": "RE758422503US",
+      "muse_correct": false,
+      "muse_s": 6.536,
+      "final_pred": "RE758422503US",
+      "final_correct": false
+    },
+    {
+      "image": "px_008.jpg",
+      "truth": "EC720432503US",
+      "facts": "two boxes;shipping labels;plants",
+      "edge_raw": "```json\n{\n  \"id\": \"672323\",\n  \"id_type\": \"barcode\",\n  \"caption\": \"Two cardboard boxes with shipping labels on a wooden surface.\"\n}\n```",
+      "edge": {
+        "id": "672323",
+        "id_type": "barcode",
+        "caption": "Two cardboard boxes with shipping labels on a wooden surface."
+      },
+      "edge_pred": "672323",
+      "edge_correct": false,
+      "edge_s": 2.933,
+      "conf": {
+        "min": 0.1055,
+        "joint": 0.0,
+        "n_tokens": 6,
+        "weakest": "6"
+      },
+      "kept": false,
+      "muse_raw": "{\"id\": \"EC 720 432 503 US\", \"id_type\": \"tracking\", \"caption\": \"Two stacked cardboard shipping boxes beside potted plants.\"}",
+      "muse": {
+        "id": "EC 720 432 503 US",
+        "id_type": "tracking",
+        "caption": "Two stacked cardboard shipping boxes beside potted plants."
+      },
+      "muse_pred": "EC720432503US",
+      "muse_correct": true,
+      "muse_s": 5.007,
+      "final_pred": "EC720432503US",
+      "final_correct": true
+    },
+    {
+      "image": "px_009.jpg",
+      "truth": "12112",
+      "facts": "cardboard box;address label;scissors",
+      "edge_raw": "```json\n{\n  \"id\": \"123 Bloomer Street, Manhattan, NY\",\n  \"id_type\": \"postal\",\n  \"caption\": \"A cardboard box with a label and a pair of scissors.\"\n}\n```",
+      "edge": {
+        "id": "123 Bloomer Street, Manhattan, NY",
+        "id_type": "postal",
+        "caption": "A cardboard box with a label and a pair of scissors."
+      },
+      "edge_pred": "123BLOOMERSTREETMANHATTANNY",
+      "edge_correct": false,
+      "edge_s": 3.164,
+      "conf": {
+        "min": 0.3806,
+        "joint": 0.0173,
+        "n_tokens": 10,
+        "weakest": " Bloom"
+      },
+      "kept": false,
+      "muse_raw": "{\"id\": \"12112\", \"id_type\": \"postal\", \"caption\": \"Cardboard shipping box with scissors, tape and clothes nearby\"}",
+      "muse": {
+        "id": "12112",
+        "id_type": "postal",
+        "caption": "Cardboard shipping box with scissors, tape and clothes nearby"
+      },
+      "muse_pred": "12112",
+      "muse_correct": true,
+      "muse_s": 6.583,
+      "final_pred": "12112",
+      "final_correct": true
+    }
+  ]
+}

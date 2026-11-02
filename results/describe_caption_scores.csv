@@ -1,0 +1,11 @@
+image,facts,edge_hits,edge_false,muse_hits,muse_false,note
+px_001.jpg,steel beams;green tag;tag says OK,1,1,3,0,"edge: 'metal structure' too vague for beams; false: 'red cherry' (red eyelet)"
+px_002.jpg,cardboard box;barcodes;QR codes,0,0,3,0,edge output empty (JSON not parsed)
+px_003.jpg,warehouse shelves;bins;shelf labels,0,0,3,0,edge: 'metal part with a label'
+px_004.jpg,package or mailer;hands;shipping label,0,0,2,0,edge: 'blurry object'; muse: no label mentioned
+px_005.jpg,person holding a box;cardboard box;shipping label,2,0,3,0,edge: no label mentioned
+px_006.jpg,cardboard box;address label;hands,2,1,3,0,"edge false: 'card' instead of box; edge caption contains SW1A 2AA but id field was '10 Downing Street'"
+px_007.jpg,cardboard box;shipping label;person writing,3,0,3,0,
+px_008.jpg,two boxes;shipping labels;plants,2,0,3,0,edge: no plants
+px_009.jpg,cardboard box;address label;scissors,3,0,2,0,muse: no label mentioned
+TOTAL,,13/27,2,25/27,0,"scored by hand against facts.csv (committed before the run); results/describe_explore_20261102_011628.json"
