@@ -1,0 +1,10 @@
+file,pexels_url,photographer,license,truth,difficulty,notes
+px_001.jpg,https://www.pexels.com/photo/close-up-of-steel-beam-with-inspection-tag-36003959/,Michael Orshan,Pexels License,W6X124953,hard,handwritten Part line on inspection tag
+px_002.jpg,https://www.pexels.com/photo/close-up-shot-of-a-delivery-package-7843978/,Kampus Production,Pexels License,5901234123457,medium,13-digit EAN; two smaller barcodes are distractors
+px_003.jpg,https://www.pexels.com/photo/labeled-shelves-in-a-warehouse-7018662/,cottonbro studio,Pexels License,P54|P533|P534|P535,medium,cropped to one shelf; printed shelf label plus three chalk bin codes
+px_004.jpg,https://www.pexels.com/photo/close-up-photo-of-a-parcel-7362924/,RDNE Stock project,Pexels License,B122A|7056,medium,yellow sort sticker; rotated; shipping label text too small to read
+px_005.jpg,https://www.pexels.com/photo/a-deliveryman-carrying-packages-7363082/,RDNE Stock project,Pexels License,EO000161100US,medium,tracking number under barcode; letter O after E
+px_006.jpg,https://www.pexels.com/photo/woman-preparing-box-with-parcel-for-sending-6347513/,Liza Summer,Pexels License,SW1A2AA,easy,no tracking number so target is the postcode
+px_007.jpg,https://www.pexels.com/photo/a-person-writing-on-a-delivery-box-postal-details-4440889/,Polina Tanikilevitch,Pexels License,EC720432503US|024P0007775060,hard,label rotated; tracking number confirmed from px_008 (same physical label); postage ID is the more legible alternate
+px_008.jpg,https://www.pexels.com/photo/boxes-with-paste-postal-stickers-4440874/,Polina Tanikilevitch,Pexels License,EC720432503US,easy,two identical labels; tracking number clear
+px_009.jpg,https://www.pexels.com/photo/scissors-and-tape-placed-on-carton-box-with-parcel-6347514/,Liza Summer,Pexels License,12112,easy,no tracking number so target is the ZIP code
