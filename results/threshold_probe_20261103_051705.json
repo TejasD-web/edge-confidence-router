@@ -1,0 +1,235 @@
+{
+  "manifest": "data/own/dev.json",
+  "edge_model": "facebook/Perception-LM-1B@2b1a854, 4 tiles",
+  "rule": "(committed before any dev data is read; do not change after seeing results):\n  Candidate thresholds G = [0.50, 0.60, 0.70, 0.80, 0.85, 0.90, 0.95, 0.98, 0.99].\n  Pick the SMALLEST t in G such that every dev answer the edge would keep\n  (joint digit confidence >= t) is correct, and at least one answer is kept.\n  If no t in G qualifies, use t = 0.99.\n  A missing/unparseable edge answer counts as wrong.\n  The chosen t is written to config/threshold.json and then frozen for the held-out run.",
+  "grid": [
+    0.5,
+    0.6,
+    0.7,
+    0.8,
+    0.85,
+    0.9,
+    0.95,
+    0.98,
+    0.99
+  ],
+  "chosen": 0.8,
+  "reason": "smallest grid value with 100% precision on kept answers",
+  "table": [
+    {
+      "threshold": 0.5,
+      "kept": 14,
+      "kept_correct": 12,
+      "precision": 0.8571,
+      "on_device_rate": 0.9333
+    },
+    {
+      "threshold": 0.6,
+      "kept": 13,
+      "kept_correct": 11,
+      "precision": 0.8462,
+      "on_device_rate": 0.8667
+    },
+    {
+      "threshold": 0.7,
+      "kept": 11,
+      "kept_correct": 10,
+      "precision": 0.9091,
+      "on_device_rate": 0.7333
+    },
+    {
+      "threshold": 0.8,
+      "kept": 9,
+      "kept_correct": 9,
+      "precision": 1.0,
+      "on_device_rate": 0.6
+    },
+    {
+      "threshold": 0.85,
+      "kept": 9,
+      "kept_correct": 9,
+      "precision": 1.0,
+      "on_device_rate": 0.6
+    },
+    {
+      "threshold": 0.9,
+      "kept": 9,
+      "kept_correct": 9,
+      "precision": 1.0,
+      "on_device_rate": 0.6
+    },
+    {
+      "threshold": 0.95,
+      "kept": 6,
+      "kept_correct": 6,
+      "precision": 1.0,
+      "on_device_rate": 0.4
+    },
+    {
+      "threshold": 0.98,
+      "kept": 5,
+      "kept_correct": 5,
+      "precision": 1.0,
+      "on_device_rate": 0.3333
+    },
+    {
+      "threshold": 0.99,
+      "kept": 2,
+      "kept_correct": 2,
+      "precision": 1.0,
+      "on_device_rate": 0.1333
+    }
+  ],
+  "rows": [
+    {
+      "image": "wm_003.jpg",
+      "truth": "33",
+      "pred": "33",
+      "raw": "33.",
+      "correct": true,
+      "conf": 0.9116,
+      "latency_s": 4.08,
+      "difficulty": "medium"
+    },
+    {
+      "image": "wm_007.jpg",
+      "truth": "34",
+      "pred": "34",
+      "raw": "34.",
+      "correct": true,
+      "conf": 0.9947,
+      "latency_s": 1.169,
+      "difficulty": "easy"
+    },
+    {
+      "image": "wm_010.jpg",
+      "truth": "30|40",
+      "pred": "1",
+      "raw": "1.",
+      "correct": false,
+      "conf": 0.6282,
+      "latency_s": 1.166,
+      "difficulty": "medium"
+    },
+    {
+      "image": "wm_015.jpg",
+      "truth": "12|15",
+      "pred": "15",
+      "raw": "15.",
+      "correct": true,
+      "conf": 0.52,
+      "latency_s": 1.165,
+      "difficulty": "hard"
+    },
+    {
+      "image": "wm_017.jpg",
+      "truth": "41",
+      "pred": "41",
+      "raw": "41.",
+      "correct": true,
+      "conf": 0.9281,
+      "latency_s": 1.166,
+      "difficulty": "medium"
+    },
+    {
+      "image": "wm_020.jpg",
+      "truth": "10|16",
+      "pred": "10",
+      "raw": "10.",
+      "correct": true,
+      "conf": 0.6324,
+      "latency_s": 1.161,
+      "difficulty": "hard"
+    },
+    {
+      "image": "wm_023.jpg",
+      "truth": "0",
+      "pred": "0",
+      "raw": "0.",
+      "correct": true,
+      "conf": 0.9831,
+      "latency_s": 1.163,
+      "difficulty": "easy"
+    },
+    {
+      "image": "wm_025.jpg",
+      "truth": "10|13",
+      "pred": "10",
+      "raw": "10.",
+      "correct": true,
+      "conf": 0.4956,
+      "latency_s": 1.168,
+      "difficulty": "hard"
+    },
+    {
+      "image": "wm_030.jpg",
+      "truth": "20",
+      "pred": "9",
+      "raw": "9.",
+      "correct": false,
+      "conf": 0.7634,
+      "latency_s": 1.167,
+      "difficulty": "easy"
+    },
+    {
+      "image": "wm_031.jpg",
+      "truth": "72|12",
+      "pred": "72",
+      "raw": "72.",
+      "correct": true,
+      "conf": 0.9857,
+      "latency_s": 1.163,
+      "difficulty": "hard"
+    },
+    {
+      "image": "wm_032.jpg",
+      "truth": "13",
+      "pred": "13",
+      "raw": "13.",
+      "correct": true,
+      "conf": 0.9941,
+      "latency_s": 1.164,
+      "difficulty": "medium"
+    },
+    {
+      "image": "wm_035.jpg",
+      "truth": "54|8",
+      "pred": "54",
+      "raw": "54.",
+      "correct": true,
+      "conf": 0.7108,
+      "latency_s": 1.162,
+      "difficulty": "hard"
+    },
+    {
+      "image": "wm_037.jpg",
+      "truth": "3|6",
+      "pred": "6",
+      "raw": "6.",
+      "correct": true,
+      "conf": 0.986,
+      "latency_s": 1.165,
+      "difficulty": "medium"
+    },
+    {
+      "image": "wm_038.jpg",
+      "truth": "2",
+      "pred": "2",
+      "raw": "2.",
+      "correct": true,
+      "conf": 0.9697,
+      "latency_s": 1.164,
+      "difficulty": "medium"
+    },
+    {
+      "image": "wm_040.jpg",
+      "truth": "26|21",
+      "pred": "26",
+      "raw": "26.",
+      "correct": true,
+      "conf": 0.9074,
+      "latency_s": 1.168,
+      "difficulty": "hard"
+    }
+  ]
+}

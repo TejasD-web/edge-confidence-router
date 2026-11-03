@@ -1,7 +1,8 @@
 {
-  "threshold": 0.85,
+  "threshold": 0.8,
+  "edge_model": "facebook/Perception-LM-1B@2b1a854, 4 tiles",
   "selected_on": "data/own/dev.json",
-  "probe": "results/threshold_probe_20261101_022045.json",
+  "probe": "results/threshold_probe_20261103_051705.json",
   "rule": "smallest of GRID with 100% precision on kept dev answers (benchmark/select_threshold.py)",
-  "selected_at": "2026-11-01T02:21:10"
+  "selected_at": "2026-11-03T05:17:45"
 }
