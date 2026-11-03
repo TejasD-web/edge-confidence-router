@@ -1,20 +1,18 @@
 """
 Edge→cloud router for fine-grained reading (jersey numbers as the benchmark).
 
-Policy "confidence" (default, pre-registered from benchmark/logprob_probe.py on the dev set):
-  Tier 1  on-device : edge Qwen reads the full frame; answer if joint digit probability >= threshold (0.9).
+Policy "confidence" (the threshold rule is pre-registered in benchmark/select_threshold.py):
+  Tier 1  on-device : the edge model (Meta Perception LM 1B, router/edge_model.py) reads the full
+                      frame; answer if joint digit probability >= threshold (config/threshold.json,
+                      chosen on the dev set).
   Tier 3  cloud read: otherwise Muse Spark reads the full frame.
+(The earlier "agreement" cascade needed an edge model that outputs bounding boxes; it was evaluated
+with Qwen2.5-VL-3B and lives at git tag `qwen-comparison`.)
 
-Policy "agreement" (original cascade, kept for comparison):
-  Tier 1  on-device   : edge full-frame read + Qwen-grounded crop read agree → answer.
-  Tier 2  cloud locate: SAM 3.1 crop read on edge agrees with the full-frame read → answer.
-  Tier 3  cloud read  : Muse Spark reads the full frame.
-
-Usage (fresh boot; the script starts and stops llama-server itself):
+Usage (the script loads and unloads the edge model itself):
   python router/route.py data/own/images/wm_013.jpg [more images ...]
-  python router/route.py --manifest                          # dev set, confidence policy
-  python router/route.py --manifest --policy agreement       # original cascade
-  python router/route.py --manifest --max-tier 1             # offline mode: never call the cloud
+  python router/route.py --manifest data/own/dev/manifest.json --image-dir data/own/dev/images
+  python router/route.py --manifest ... --max-tier 1         # offline mode: never call the cloud
   python router/route.py --manifest data/heldout/manifest.json --image-dir data/heldout/images
 
 Read now, verify later (confidence policy):
@@ -31,7 +29,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 os.chdir(ROOT)
 
-from benchmark import run_benchmark as rb   # edge server, reads, grounding, crops, scoring
+from benchmark import run_benchmark as rb   # edge model, reads, scoring
 from router import meta_client as mc        # SAM 3.1 + Muse Spark
 from benchmark import logprob_probe as lp    # logprob query + confidence
 
@@ -116,10 +114,6 @@ def sync():
               f" -> after sync {sum(e['correct'] for e in scored)}/{len(scored)}")
     print("=" * 60)
 
-def edge_read(image_path):
-    raw, t = rb.query_vlm(rb.prep_read(image_path))
-    return rb.normalize(raw), raw, t
-
 def new_record(image_path):
     rec = {"image": os.path.basename(image_path), "steps": [], "sam3_calls": 0, "muse_calls": 0}
     t_start = time.time()
@@ -165,56 +159,7 @@ def route_confidence(image_path, max_tier=3, threshold=CONF_THRESHOLD):
         return done(1, p_full, f"LOW CONFIDENCE: edge confidence {conf['joint']:.3f} < {threshold}, no connection; queued for verification")
     return muse_tier(image_path, rec, step, done, p_full)
 
-def route_agreement(image_path, max_tier=3):
-    """Original cascade: two edge views agree → SAM 3.1 crop agrees → Muse Spark."""
-    stem = os.path.splitext(os.path.basename(image_path))[0]
-    rec, step, done = new_record(image_path)
-
-    # ── Tier 1: fully on-device ──
-    p_full, raw, t = edge_read(image_path)
-    step("edge_full", p_full, t, raw=raw)
-
-    box, graw, tg = rb.ground(image_path)
-    step("edge_ground", None, tg, box=box)
-    p_box = None
-    if box:
-        crop_path, _ = rb.box_crop(image_path, box)
-        p_box, raw, t = edge_read(crop_path)
-        step("edge_box_read", p_box, t, raw=raw)
-
-    if p_full is not None and p_full == p_box:
-        return done(1, p_full, "edge full-frame and grounded-crop reads agree")
-    if max_tier < 2:
-        return done(1, p_full, "LOW CONFIDENCE: views disagree, cloud disabled (offline mode)")
-
-    # ── Tier 2: cloud localizes, edge reads ──
-    try:
-        boxes, _, ts = mc.sam_segment(image_path)
-        rec["sam3_calls"] += 1
-        step("sam3_locate", None, ts, n_boxes=len(boxes))
-    except Exception as e:
-        boxes = []
-        step("sam3_locate", None, None, error=str(e)[:200])
-
-    if boxes:
-        big = max(boxes, key=lambda b: (b[2] - b[0]) * (b[3] - b[1]))
-        crop = mc.pad_crop(Image.open(image_path).convert("RGB"), big)
-        crop_path = os.path.join(rb.CROP_DIR, f"route_sam3_{stem}.jpg")
-        crop.save(crop_path, quality=95)
-        p_c2e, raw, t = edge_read(crop_path)
-        step("edge_read_sam3_crop", p_c2e, t, raw=raw, box=big)
-        if p_full is not None and p_c2e == p_full:
-            return done(2, p_full, "SAM 3.1 crop read on edge agrees with full-frame read")
-
-    if max_tier < 3:
-        return done(2, p_full, "LOW CONFIDENCE: no agreement, Muse disabled")
-
-    # ── Tier 3: cloud reads ──
-    return muse_tier(image_path, rec, step, done, p_full)
-
 def route(image_path, max_tier=3, policy="confidence"):
-    if policy == "agreement":
-        return route_agreement(image_path, max_tier)
     return route_confidence(image_path, max_tier)
 
 def print_record(rec, truth=None):
@@ -265,7 +210,7 @@ def main():
     ap.add_argument("--manifest", nargs="?", const=rb.MANIFEST, help="route + score every image in a manifest")
     ap.add_argument("--image-dir", default=rb.IMAGE_DIR)
     ap.add_argument("--max-tier", type=int, default=3, choices=[1, 2, 3], help="1 = offline, 2 = no Muse")
-    ap.add_argument("--policy", default="confidence", choices=["confidence", "agreement"])
+    ap.add_argument("--policy", default="confidence", choices=["confidence"])
     ap.add_argument("--sync", action="store_true", help="verify queued frames with Muse Spark (no edge server needed)")
     ap.add_argument("--clear-queue", action="store_true", help="delete the offline queue")
     args = ap.parse_args()
@@ -289,16 +234,14 @@ def main():
     if not jobs:
         ap.error("give image paths or --manifest")
 
-    mem_avail = next(int(l.split()[1]) for l in open("/proc/meminfo") if l.startswith("MemAvailable"))
-    if mem_avail < 4_500_000:
-        sys.exit(f"[MEM] Only {mem_avail // 1024} MB available (need ~4.5 GB). Drop caches first: sync && sudo sysctl -w vm.drop_caches=3")
+    rb.mem_check()
 
     proc, _ = rb.start_vlm_server()
     records = []
     try:
         for path, truth in jobs:
             if proc.poll() is not None:
-                print("[VLM] Server died — see results/vlm_server.log")
+                print("[EDGE] Edge model unloaded — aborting")
                 break
             rec = route(path, max_tier=args.max_tier, policy=args.policy)
             rec["policy"] = args.policy
@@ -313,7 +256,8 @@ def main():
         summarize(records)
         out = os.path.join(rb.RESULTS_DIR, f"route_{datetime.now():%Y%m%d_%H%M%S}.json")
         with open(out, "w") as f:
-            json.dump({"policy": args.policy, "threshold": CONF_THRESHOLD if args.policy == "confidence" else None,
+            json.dump({"policy": args.policy, "threshold": CONF_THRESHOLD,
+                       "edge_model": f"{rb.em.MODEL_ID}@{rb.em.REVISION[:7]}, {rb.em.MAX_TILES} tiles",
                        "max_tier": args.max_tier, "manifest": args.manifest, "records": records}, f, indent=2)
         print(f"[LOG] Wrote {out}")
 

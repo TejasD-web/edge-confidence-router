@@ -1,10 +1,15 @@
 """
-Benchmark harness: VLM server (started first) → [grounding] → SAM batch (one process) → score.
+Benchmark harness and shared edge helpers: edge model (Perception LM 1B, loaded first) → SAM 2.1 batch
+(one process) → score.
 Usage:
-  python benchmark/run_benchmark.py                          # center-point SAM crop only
+  python benchmark/run_benchmark.py                          # center-point SAM 2.1 crop only
   python benchmark/run_benchmark.py --baseline               # + full image (no SAM)
-  python benchmark/run_benchmark.py --baseline --grounding   # + Qwen box crop, + Qwen box → SAM crop
-Needs ~4.5 GB MemAvailable; if lower, run: sync && sudo sysctl -w vm.drop_caches=3 (no reboot needed).
+  python benchmark/run_benchmark.py --baseline --cloud       # + Muse full, SAM 3.1 crop -> edge, SAM 3.1 crop -> Muse
+Needs ~3.5 GB MemAvailable; if lower, run: sync && sudo sysctl -w vm.drop_caches=3 (no reboot needed).
+
+Every edge read in the project goes through edge_chat() / query_vlm() here, which call
+router/edge_model.py (Meta Perception LM 1B, in-process). The earlier Qwen2.5-VL-3B comparison
+(a non-Meta model, not part of this project) was produced by the code at git tag `qwen-comparison`.
 """
 import sys, os, re, json, time, base64, subprocess, statistics, argparse
 from datetime import datetime
@@ -15,16 +20,9 @@ IMAGE_DIR = "data/images"
 MANIFEST = "data/manifest.json"
 CROP_DIR = "results/crops"
 RESULTS_DIR = "results"
-LLAMA_SERVER = "/mnt/nvme/project/llama.cpp/build/bin/llama-server"
-VLM_MODEL = "/mnt/nvme/models/qwen2.5-vl-3b-gguf/Qwen2.5-VL-3B-Instruct-q4_k_m.gguf"
-VLM_MMPROJ = "/mnt/nvme/models/qwen2.5-vl-3b-gguf/Qwen2.5-VL-3B-Instruct-mmproj-q8_0.gguf"
-VLM_URL = "http://localhost:8080/v1/chat/completions"
-SAM_DEVICE = "cpu"   # "cpu" = fallback if SAM can't share GPU with the server
-VLM_NGL = "99"       # v2: all layers on GPU (works since -lm dio fix); v1 used "5"
+SAM_DEVICE = "cpu"   # SAM 2.1 runs on CPU so it never competes with the edge model for GPU memory
 PROMPT = "What jersey number is the player wearing? Reply with ONLY the number, nothing else."
-GROUND_PROMPT = ("Locate the jersey number of the player whose number is most clearly visible. "
-                 'Output its bounding box as JSON: {"bbox_2d": [x1, y1, x2, y2]}')
-GROUND_TARGET_TOKENS = 1000   # Qwen-VL needs ~1024 image tokens for reliable grounding
+MEM_NEEDED_KB = 3_500_000   # edge model peaks ~3.1 GB
 
 os.makedirs(CROP_DIR, exist_ok=True)
 
@@ -158,96 +156,44 @@ def run_sam_batch(jobs):
         print(f"[SAM] Process exited with code {proc.returncode}:\n{proc.stderr[-2000:]}")
     return crops, load_time
 
-# ── VLM server (one session for all queries) ──
+# ── Edge model (Perception LM 1B, in-process; see router/edge_model.py) ──
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from router import edge_model as em
+
+
+class _EdgeHandle:
+    """Stands in for the old server process handle so callers' `proc.poll()` checks keep working."""
+    returncode = None
+    def poll(self):
+        return None if em.loaded() else 0
+
 
 def start_vlm_server():
-    print(f"[VLM] Starting llama-server (ngl={VLM_NGL}, unified memory)...")
-    log_file = open(os.path.join(RESULTS_DIR, "vlm_server.log"), "w")
-    env = {k: v for k, v in os.environ.items() if k != "LD_LIBRARY_PATH"}
-    env["GGML_CUDA_ENABLE_UNIFIED_MEMORY"] = "1"
-    proc = subprocess.Popen(
-        [LLAMA_SERVER, "-m", VLM_MODEL, "--mmproj", VLM_MMPROJ,
-         "-ngl", VLM_NGL, "--ctx-size", "1536", "--host", "0.0.0.0",
-         "--port", "8080", "-np", "1", "--image-min-tokens", "64", "--image-max-tokens", "1024", "-b", "1024", "-ub", "512", "-lv", "4", "-lm", "dio"],
-        stdout=log_file, stderr=subprocess.STDOUT, env=env,
-    )
-    import requests
-    t0 = time.time()
-    for _ in range(120):
-        time.sleep(1)
-        if proc.poll() is not None:
-            raise RuntimeError(f"llama-server exited early (code {proc.returncode}); see results/vlm_server.log")
-        try:
-            if requests.get("http://localhost:8080/health").status_code == 200:
-                print(f"[VLM] Server ready after {time.time() - t0:.1f}s")
-                return proc, round(time.time() - t0, 3)
-        except requests.ConnectionError:
-            pass
-    raise RuntimeError("llama-server not ready after 120s")
+    """Load the edge model (kept name: callers start the edge before reading)."""
+    return _EdgeHandle(), em.load()
 
-def stop_vlm_server(proc):
-    if proc.poll() is None:
-        proc.terminate()
-        proc.wait(timeout=10)
-    print("[VLM] Server stopped")
+
+def stop_vlm_server(proc=None):
+    em.unload()
+
+
+def edge_chat(image_path, prompt=PROMPT, max_tokens=16, top_logprobs=0):
+    """(text, tokens with logprobs, seconds). The single entry point for edge reads."""
+    return em.chat(image_path, prompt, max_tokens=max_tokens, top_logprobs=top_logprobs)
+
 
 def query_vlm(image_path, prompt=PROMPT, max_tokens=16):
-    import requests
-    with open(image_path, "rb") as f:
-        b64 = base64.b64encode(f.read()).decode()
-    t0 = time.time()
-    resp = requests.post(VLM_URL, json={
-        "model": "qwen2.5-vl",
-        "messages": [{"role": "user", "content": [
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
-            {"type": "text", "text": prompt},
-        ]}],
-        "max_tokens": max_tokens, "temperature": 0,
-    }, timeout=120)
-    elapsed = time.time() - t0
-    return resp.json()["choices"][0]["message"]["content"].strip(), round(elapsed, 3)
+    raw, _, t = edge_chat(image_path, prompt, max_tokens)
+    return raw, t
 
-# ── Grounding: Qwen locates the jersey number, box scaled back to original resolution ──
 
-BBOX_RE = re.compile(r"\[\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]")
-
-def ground(image_path):
-    img = Image.open(image_path).convert("RGB")
-    w, h = img.size
-    s = (GROUND_TARGET_TOKENS * 28 * 28 / (w * h)) ** 0.5
-    nw, nh = max(28, int(w * s / 28) * 28), max(28, int(h * s / 28) * 28)
-    stem = os.path.splitext(os.path.basename(image_path))[0]
-    small_path = os.path.join(CROP_DIR, f"ground_{stem}.jpg")
-    img.resize((nw, nh)).save(small_path, quality=95)
-
-    raw, t = query_vlm(small_path, prompt=GROUND_PROMPT, max_tokens=64)
-    m = BBOX_RE.search(raw)
-    if not m:
-        return None, raw, t
-    x1, y1, x2, y2 = map(float, m.groups())
-    if x2 > nw * 1.05 or y2 > nh * 1.05:
-        return None, f"OUT_OF_RANGE({nw}x{nh}): {raw}", t
-    sx, sy = w / nw, h / nh
-    x1, x2 = sorted((x1 * sx, x2 * sx))
-    y1, y2 = sorted((y1 * sy, y2 * sy))
-    x1, y1 = max(0, int(x1)), max(0, int(y1))
-    x2, y2 = min(w - 1, int(x2)), min(h - 1, int(y2))
-    if x2 - x1 < 4 or y2 - y1 < 4:
-        return None, raw, t
-    return [x1, y1, x2, y2], raw, t
-
-def box_crop(image_path, box):
-    """Crop to the grounding box with generous padding (numbers sit on a torso; give context)."""
-    img = Image.open(image_path).convert("RGB")
-    w, h = img.size
-    x1, y1, x2, y2 = box
-    px = max(32, int((x2 - x1) * 0.5))
-    py = max(32, int((y2 - y1) * 0.5))
-    crop = img.crop((max(0, x1 - px), max(0, y1 - py), min(w, x2 + px), min(h, y2 + py)))
-    stem = os.path.splitext(os.path.basename(image_path))[0]
-    out = os.path.join(CROP_DIR, f"crop_vbox_{stem}.jpg")
-    crop.save(out, quality=95)
-    return out, f"{crop.size[0]}x{crop.size[1]}"
+def mem_check():
+    mem_avail = next(int(l.split()[1]) for l in open("/proc/meminfo") if l.startswith("MemAvailable"))
+    if mem_avail < MEM_NEEDED_KB:
+        sys.exit(f"[MEM] Only {mem_avail // 1024} MB available (need ~{MEM_NEEDED_KB // 1000} MB). "
+                 "Drop caches first: sync && sudo sysctl -w vm.drop_caches=3")
+    return mem_avail
 
 # ── Scoring ──
 
@@ -287,18 +233,9 @@ def summarize(rows, key):
         "vlm_latency_p50_s": round(statistics.median(lat), 3),
     }
 
-READ_MAX_TOKENS = 256   # reading accuracy was best at <=256 image tokens (59% full-image run)
-
 def prep_read(image_path):
-    """Resize up OR down to ~READ_MAX_TOKENS 28px patches: equal token budget for every condition."""
-    img = Image.open(image_path).convert("RGB")
-    w, h = img.size
-    s = (READ_MAX_TOKENS * 28 * 28 / (w * h)) ** 0.5
-    nw, nh = max(28, int(w * s / 28) * 28), max(28, int(h * s / 28) * 28)
-    stem = os.path.splitext(os.path.basename(image_path))[0]
-    out = os.path.join(CROP_DIR, f"read_{stem}.jpg")
-    img.resize((nw, nh), Image.LANCZOS).save(out, quality=95)
-    return out
+    """The full frame goes to the edge model as is; PLM's processor tiles it (edge_model.MAX_TILES)."""
+    return image_path
 
 def run_condition(row, key, tag, image_path, truth, extra=None):
     try:
@@ -310,8 +247,6 @@ def run_condition(row, key, tag, image_path, truth, extra=None):
         print(f"[{tag}] {row['image']}: ERROR {e}")
 
 # ── Cloud tier (Meta Model API) ──
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def muse_condition(row, key, tag, img_or_path, truth, extra=None):
     from router import meta_client as mc
@@ -352,7 +287,6 @@ def run_cloud_conditions(row, image_path, truth):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--baseline", action="store_true", help="also query full images without SAM")
-    ap.add_argument("--grounding", action="store_true", help="Qwen box crop and Qwen box → SAM crop")
     ap.add_argument("--cloud", action="store_true", help="Meta API: Muse full, SAM 3.1 → edge read, SAM 3.1 → Muse")
     args = ap.parse_args()
 
@@ -360,14 +294,11 @@ def main():
     image_paths = [os.path.join(IMAGE_DIR, m["image"]) for m in manifest]
 
     # 0. Guard: GPU allocs (nvmap, not CMA) fail rather than evict page cache, so start with headroom
-    mem_avail = next(int(l.split()[1]) for l in open("/proc/meminfo") if l.startswith("MemAvailable"))
-    if mem_avail < 4_500_000:
-        sys.exit(f"[MEM] Only {mem_avail // 1024} MB available (need ~4.5 GB). Drop caches first: sync && sudo sysctl -w vm.drop_caches=3")
-    print(f"[MEM] {mem_avail // 1024} MB available")
+    print(f"[MEM] {mem_check() // 1024} MB available")
 
-    # 1. VLM first: allocate its GPU buffers before SAM’s process adds memory pressure.
+    # 1. Edge model first: allocate its GPU memory before SAM's process adds memory pressure.
     vlm_proc, server_startup = start_vlm_server()
-    rows, sam_load_time, boxes = [], None, {}
+    rows, sam_load_time = [], None
     try:
         # 2. Warm-up
         warm = os.path.join(RESULTS_DIR, "warmup.jpg")
@@ -375,22 +306,14 @@ def main():
         raw, t = query_vlm(warm)
         print(f"[VLM] Warm-up OK: '{raw}' in {t}s")
 
-        # 3. Grounding pass (VLM only, before SAM touches the GPU)
-        if args.grounding:
-            for p in image_paths:
-                name = os.path.basename(p)
-                box, raw, t = ground(p)
-                boxes[name] = {"box": box, "raw": raw, "ground_time_s": t}
-                print(f"[GRND] {name}: {box if box else 'NO BOX'} ({t}s)" + ("" if box else f" raw={raw[:60]!r}"))
-
         # 4. SAM batch while server stays loaded
-        jobs = [{"path": p, "box": boxes.get(os.path.basename(p), {}).get("box")} for p in image_paths]
+        jobs = [{"path": p} for p in image_paths]
         crops, sam_load_time = run_sam_batch(jobs)
 
         # 5. Query every condition
         for m in manifest:
             if vlm_proc.poll() is not None:
-                print(f"[VLM] Server died (code {vlm_proc.returncode}) — aborting. See results/vlm_server.log")
+                print("[EDGE] Edge model unloaded — aborting.")
                 break
             name, truth = m["image"], m["jersey_number"]
             row = {"image": name, "truth": truth, "difficulty": m.get("difficulty", "?")}
@@ -400,17 +323,6 @@ def main():
                               {"crop_size": c["crop_size"], "sam_seg_time_s": c["sam_seg_time"]})
             if args.baseline:
                 run_condition(row, "full_image", "FULL", os.path.join(IMAGE_DIR, name), truth)
-            if args.grounding:
-                g = boxes.get(name, {})
-                row["grounding"] = g
-                if g.get("box"):
-                    vb_path, vb_size = box_crop(os.path.join(IMAGE_DIR, name), g["box"])
-                    run_condition(row, "vlm_box", "VBOX", vb_path, truth,
-                                  {"crop_size": vb_size, "ground_time_s": g["ground_time_s"]})
-                if c and "box_crop_path" in c:
-                    run_condition(row, "vlm_box_sam", "VSAM", c["box_crop_path"], truth,
-                                  {"crop_size": c["box_crop_size"], "box_score": c["box_score"],
-                                   "ground_time_s": g.get("ground_time_s")})
             if args.cloud:
                 run_cloud_conditions(row, os.path.join(IMAGE_DIR, name), truth)
             rows.append(row)
@@ -419,16 +331,12 @@ def main():
 
     summary = {
         "timestamp": datetime.now().isoformat(timespec="seconds"),
-        "config": {"order": "vlm_first", "sam_device": SAM_DEVICE, "vlm_ngl": VLM_NGL,
-                   "image_tokens": "read=256 (equalized), ground~1000", "ubatch": 512, "ctx_size": 1536, "prompt": PROMPT,
-                   "ground_prompt": GROUND_PROMPT if args.grounding else None,
-                   "ground_target_tokens": GROUND_TARGET_TOKENS if args.grounding else None,
+        "config": {"order": "edge_first", "sam_device": SAM_DEVICE,
+                   "edge_model": f"{em.MODEL_ID}@{em.REVISION[:7]}", "edge_tiles": em.MAX_TILES, "prompt": PROMPT,
                    "cloud_models": "sam-3.1 + muse-spark-1.3" if args.cloud else None,
-                   "sam_load_time_s": sam_load_time, "vlm_server_startup_s": server_startup},
+                   "sam_load_time_s": sam_load_time, "edge_load_s": server_startup},
         "sam_crop": summarize(rows, "sam_crop"),
         "full_image": summarize(rows, "full_image"),
-        "vlm_box": summarize(rows, "vlm_box"),
-        "vlm_box_sam": summarize(rows, "vlm_box_sam"),
         "muse_full": summarize(rows, "muse_full"),
         "cloud_sam_edge_read": summarize(rows, "cloud_sam_edge_read"),
         "cloud_sam_muse": summarize(rows, "cloud_sam_muse"),

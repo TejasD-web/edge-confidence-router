@@ -13,6 +13,8 @@ The jersey pipeline (route.py, run_benchmark.py scoring, config/threshold.json) 
 Usage (repo root, fresh-ish memory):
   python benchmark/label_test.py
   python benchmark/label_test.py --muse-all     # also read every image with Muse, for comparison
+Edge model: router/edge_model.py (Meta Perception LM 1B). The Qwen2.5-VL-3B label results in the
+README were produced by the code at git tag `qwen-comparison` (non-Meta model, not part of this project).
 """
 import os, sys, re, csv, json, math, time, base64, inspect, argparse
 from datetime import datetime
@@ -40,22 +42,8 @@ def score(raw, truth):
     return pred is not None and pred in [norm(t) for t in truth.split("|")], pred
 
 
-def edge_read(path):
-    import requests
-    with open(path, "rb") as f:
-        b64 = base64.b64encode(f.read()).decode()
-    t0 = time.time()
-    r = requests.post(rb.VLM_URL, json={
-        "model": "qwen2.5-vl",
-        "messages": [{"role": "user", "content": [
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
-            {"type": "text", "text": LABEL_PROMPT}]}],
-        "max_tokens": MAX_TOKENS, "temperature": 0, "logprobs": True, "top_logprobs": 3,
-    }, timeout=120)
-    t = round(time.time() - t0, 3)
-    ch = r.json()["choices"][0]
-    toks = (ch.get("logprobs") or {}).get("content") or []
-    return ch["message"]["content"].strip(), toks, t
+def edge_read(path, prompt=None):
+    return rb.edge_chat(path, prompt or LABEL_PROMPT, max_tokens=MAX_TOKENS, top_logprobs=3)
 
 
 def confidence(toks):
@@ -85,25 +73,25 @@ def main():
     ap.add_argument("--muse-all", action="store_true", help="also read every image with Muse (comparison)")
     ap.add_argument("--prompt", help="override the edge/Muse prompt (EXPLORATORY: any non-default prompt was "
                     "chosen after seeing these images; never report its number as a clean held-out result)")
-    ap.add_argument("--image-tokens", type=int, default=rb.READ_MAX_TOKENS,
-                    help="edge image budget (default 256 = pre-registered run). Anything else is EXPLORATORY "
-                         "and is reported separately. Max 1024 (llama-server --image-max-tokens).")
+    ap.add_argument("--tiles", type=int, default=None,
+                    help="edge image tiles (default = edge_model.MAX_TILES, the pre-registered setting). "
+                         "Anything else is EXPLORATORY and is reported separately.")
     args = ap.parse_args()
+    from router import edge_model as em
+    default_tiles = em.MAX_TILES
+    if args.tiles:
+        em.MAX_TILES = args.tiles                  # read by edge_model.load()
     global LABEL_PROMPT
     if args.prompt:
         LABEL_PROMPT = args.prompt
-    exploratory = args.image_tokens != 256 or bool(args.prompt)
-    rb.READ_MAX_TOKENS = args.image_tokens       # prep_read() reads this module global at call time
-    print(f"[CFG] edge image budget {args.image_tokens} tokens, threshold {THRESHOLD}"
+    exploratory = em.MAX_TILES != default_tiles or bool(args.prompt)
+    print(f"[CFG] edge {em.NAME}, {em.MAX_TILES} tiles, threshold {THRESHOLD}"
           + ("  ** EXPLORATORY (post-hoc), not the pre-registered run **" if exploratory else ""))
     if args.prompt:
         print(f"[CFG] custom prompt: {LABEL_PROMPT!r}")
 
     rows = list(csv.DictReader(open(args.labels, encoding="utf-8")))
-    mem = next(int(l.split()[1]) for l in open("/proc/meminfo") if l.startswith("MemAvailable"))
-    if mem < 4_500_000:
-        sys.exit(f"[MEM] Only {mem // 1024} MB available (need ~4.5 GB). "
-                 "Drop caches first: sync && sudo sysctl -w vm.drop_caches=3")
+    rb.mem_check()
 
     out = []
     proc, _ = rb.start_vlm_server()
@@ -151,13 +139,14 @@ def main():
         print(f"Muse alone:           {sum(o.get('muse_correct', False) for o in out)}/{n} correct")
     print(f"Confident errors (kept but wrong): {[o['image'] for o in kept if not o['edge_correct']]}")
     print(f"n = {n}, qualitative task-transfer check; threshold fixed in advance, not tuned."
-          + (f" EXPLORATORY: image budget {args.image_tokens} chosen after seeing the 256-token run." if exploratory else ""))
+          + (" EXPLORATORY: settings chosen after seeing the pre-registered run." if exploratory else ""))
     print(f"Mean edge read: {sum(o['edge_s'] for o in out) / n:.2f}s")
 
-    tag = f"_explore_{args.image_tokens}tok" if exploratory else ""
+    tag = f"_explore_{em.MAX_TILES}tiles" if exploratory else ""
     path = os.path.join(rb.RESULTS_DIR, f"labels{tag}_{datetime.now():%Y%m%d_%H%M%S}.json")
     json.dump({"prompt": LABEL_PROMPT, "threshold": THRESHOLD, "signal": "min token prob",
-               "image_tokens": args.image_tokens, "exploratory": exploratory,
+               "edge_model": f"{em.MODEL_ID}@{em.REVISION[:7]}", "edge_tiles": em.MAX_TILES,
+               "exploratory": exploratory,
                "muse_all": args.muse_all, "rows": out}, open(path, "w"), indent=2)
     print(f"[LOG] Wrote {path}")
 

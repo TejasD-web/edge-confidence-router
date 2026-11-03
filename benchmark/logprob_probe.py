@@ -1,7 +1,7 @@
 """
 Day 5 probe: is the edge model's own token probability a usable tier-1 confidence signal?
 
-Reads every DEV image once (full frame, 256-token budget) with logprobs, then simulates routing
+Reads every DEV image once (full frame) with logprobs, then simulates routing
 policies using the cloud results already stored in a benchmark JSON (no new API calls).
 Dev set only -- never run this on data/heldout.
 
@@ -20,22 +20,8 @@ from benchmark import run_benchmark as rb
 THRESHOLDS = [0.5, 0.7, 0.8, 0.9, 0.95, 0.98, 0.99]
 
 def query_logprobs(image_path, top=5):
-    import requests
-    with open(image_path, "rb") as f:
-        b64 = base64.b64encode(f.read()).decode()
-    t0 = time.time()
-    r = requests.post(rb.VLM_URL, json={
-        "model": "qwen2.5-vl",
-        "messages": [{"role": "user", "content": [
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
-            {"type": "text", "text": rb.PROMPT},
-        ]}],
-        "max_tokens": 16, "temperature": 0, "logprobs": True, "top_logprobs": top,
-    }, timeout=120)
-    t = round(time.time() - t0, 3)
-    ch = r.json()["choices"][0]
-    toks = (ch.get("logprobs") or {}).get("content") or []
-    return ch["message"]["content"].strip(), toks, t
+    """Edge read of the jersey prompt with per-token logprobs (edge model: router/edge_model.py)."""
+    return rb.edge_chat(image_path, rb.PROMPT, max_tokens=16, top_logprobs=top)
 
 def confidence(toks):
     """joint = P(all answer digits), min = weakest digit, margin = top1 - top2 on the first digit."""
@@ -105,9 +91,7 @@ def main():
     bench = {r["image"]: r for r in json.load(open(bench_path))["rows"]}
     print(f"[BENCH] cloud results from {bench_path}")
 
-    mem_avail = next(int(l.split()[1]) for l in open("/proc/meminfo") if l.startswith("MemAvailable"))
-    if mem_avail < 4_500_000:
-        sys.exit(f"[MEM] Only {mem_avail // 1024} MB available (need ~4.5 GB). Drop caches first: sync && sudo sysctl -w vm.drop_caches=3")
+    rb.mem_check()
 
     manifest = rb.load_manifest()
     proc, _ = rb.start_vlm_server()
@@ -117,7 +101,7 @@ def main():
             path = os.path.join(rb.IMAGE_DIR, m["image"])
             raw, toks, t = query_logprobs(rb.prep_read(path))
             if not toks and not rows:
-                print("[WARN] response had no logprobs.content -- check llama-server version/response format")
+                print("[WARN] edge read returned no tokens")
             ok, pred = rb.score(raw, m["jersey_number"])
             rows.append({"image": m["image"], "truth": m["jersey_number"], "difficulty": m.get("difficulty"),
                          "pred": pred, "raw": raw, "correct": ok, "latency_s": t, "conf": confidence(toks),
@@ -137,12 +121,12 @@ def main():
 
     a_ok, a_kept, a_sam, a_muse = agreement_cascade(bench, [r["image"] for r in rows])
     print(f"\nCurrent agreement cascade (from stored benchmark): {a_ok}/{n} correct, "
-          f"{a_kept} on-device, {a_sam} SAM 3.1, {a_muse} Muse  (tier 1 costs ~14s/frame)")
+          f"{a_kept} on-device, {a_sam} SAM 3.1, {a_muse} Muse")
 
     summary = []
     for use_sam3 in (False, True):
         label = "logprob -> SAM 3.1 agree -> Muse" if use_sam3 else "logprob -> Muse"
-        print(f"\nPolicy: {label}   (tier 1 costs ~2.6s/frame)")
+        print(f"\nPolicy: {label}")
         print(f"  {'signal':<7}{'thresh':>7}{'acc':>8}{'on-device':>11}{'kept prec':>11}{'SAM3':>6}{'Muse':>6}")
         for signal in ("joint", "min", "margin"):
             for t in THRESHOLDS:
