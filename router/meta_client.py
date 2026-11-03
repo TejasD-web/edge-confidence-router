@@ -1,6 +1,6 @@
 """
 Meta Model API client: SAM 3.1 concept segmentation + Muse Spark reading.
-Test:  python router/meta_client.py img_001.jpg img_011.jpg img_014.jpg [--read]
+Test:  python router/meta_client.py wm_013.jpg wm_029.jpg wm_033.jpg [--read]
 """
 import os, re, sys, json, time, base64, io
 import requests
@@ -98,8 +98,8 @@ if __name__ == "__main__":
     do_read = "--read" in sys.argv
     out_dir = "results/cloud_viz"
     os.makedirs(out_dir, exist_ok=True)
-    for name in args or ["img_001.jpg", "img_011.jpg", "img_014.jpg"]:
-        path = os.path.join("data/images", name)
+    for name in args or ["wm_013.jpg", "wm_029.jpg", "wm_033.jpg"]:
+        path = os.path.join("data/own/images", name)
         try:
             boxes, raw, t = sam_segment(path)
         except Exception as e:

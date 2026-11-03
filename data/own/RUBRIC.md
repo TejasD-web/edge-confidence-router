@@ -1,6 +1,6 @@
 # Evaluation set rubric (own / openly licensed data)
 
-**Status: final. Committed in `1f5a548` before any model run; unchanged since.**
+**Status: final. Committed in `3236aaa` before any model run; unchanged since.** (Hash after a Nov 3 history cleanup that removed an unlicensed image crop; commit dates unchanged.)
 
 ## Task
 One image in, one jersey number out. Prompt and scoring are unchanged from `benchmark/run_benchmark.py`.

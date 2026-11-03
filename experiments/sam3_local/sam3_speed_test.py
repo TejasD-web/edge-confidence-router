@@ -16,7 +16,7 @@ print(f"Built in {time.time() - t0:.1f}s | params {n_params / 1e6:.0f}M | "
       f"GPU allocated {torch.cuda.memory_allocated() / 2**20:.0f} MB | MemAvailable {mem_avail_mb()} MB")
 
 processor = Sam3Processor(model)
-img = Image.open("/mnt/nvme/project/zero-training-edge-recognition/data/images/img_001.jpg").convert("RGB")
+img = Image.open("/mnt/nvme/project/zero-training-edge-recognition/data/own/images/wm_013.jpg").convert("RGB")
 
 for label, ctx in [("bf16 autocast", torch.autocast("cuda", dtype=torch.bfloat16))]:
     with torch.no_grad(), ctx:

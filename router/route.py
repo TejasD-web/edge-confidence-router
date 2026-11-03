@@ -11,7 +11,7 @@ Policy "agreement" (original cascade, kept for comparison):
   Tier 3  cloud read  : Muse Spark reads the full frame.
 
 Usage (fresh boot; the script starts and stops llama-server itself):
-  python router/route.py data/images/img_001.jpg [more images ...]
+  python router/route.py data/own/images/wm_013.jpg [more images ...]
   python router/route.py --manifest                          # dev set, confidence policy
   python router/route.py --manifest --policy agreement       # original cascade
   python router/route.py --manifest --max-tier 1             # offline mode: never call the cloud
