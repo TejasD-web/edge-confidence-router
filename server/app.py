@@ -1,8 +1,9 @@
 """
 FastAPI service + live dashboard around the confidence router.
 
-The server owns llama-server for its whole lifetime (started on boot, stopped on shutdown),
-so every request is a warm ~1 s edge read. Requests are serialized (llama-server runs -np 1).
+The server loads the edge model (Meta Perception LM 1B, router/edge_model.py) once at startup and
+keeps it on the GPU, so every request is a warm ~1.2 s edge read. Requests are serialized (one
+model, one GPU).
 
 Run (from the repo root, fresh-ish memory):
   uvicorn server.app:app --host 0.0.0.0 --port 8000
@@ -41,7 +42,7 @@ STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 MAX_EVENTS = 500
 
 state = {"offline": False, "events": [], "next_id": 1}
-route_lock = threading.Lock()     # one request at a time into llama-server
+route_lock = threading.Lock()     # one request at a time into the edge model
 state_lock = threading.Lock()
 server_proc = None
 
@@ -49,10 +50,7 @@ server_proc = None
 @contextlib.asynccontextmanager
 async def lifespan(app):
     global server_proc
-    mem_avail = next(int(l.split()[1]) for l in open("/proc/meminfo") if l.startswith("MemAvailable"))
-    if mem_avail < 4_500_000:
-        sys.exit(f"[MEM] Only {mem_avail // 1024} MB available (need ~4.5 GB). "
-                 "Drop caches first: sync && sudo sysctl -w vm.drop_caches=3")
+    rb.mem_check()
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     server_proc, _ = rb.start_vlm_server()
     try:
@@ -94,7 +92,7 @@ def read(image: UploadFile = File(...), truth: str = Form(None), task: str = For
     if t is None:
         raise HTTPException(422, f"unknown task {task!r}; see GET /tasks")
     if server_proc is not None and server_proc.poll() is not None:
-        raise HTTPException(503, "llama-server died; see results/vlm_server.log and restart the service")
+        raise HTTPException(503, "edge model is not loaded; restart the service")
     ext = os.path.splitext(image.filename or "")[1].lower() or ".jpg"
     if ext not in (".jpg", ".jpeg", ".png"):
         raise HTTPException(415, "jpg or png only")
@@ -139,7 +137,8 @@ def events(since: int = 0):
     with state_lock:
         evs = [e for e in state["events"] if e["id"] > since]
         summ = _summary(state["events"])
-    return {"events": evs, "summary": summ, "offline": state["offline"], "threshold": rt.CONF_THRESHOLD}
+    return {"events": evs, "summary": summ, "offline": state["offline"], "threshold": rt.CONF_THRESHOLD,
+            "edge_model": rb.em.NAME}
 
 
 class TaskIn(BaseModel):

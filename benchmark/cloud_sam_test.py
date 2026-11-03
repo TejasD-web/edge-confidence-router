@@ -6,7 +6,7 @@ data-rights reasons and are not reported). All conditions here are fixed pipelin
 tunable choices, evaluated once:
 
   muse_full   : Muse Spark, full image              (cloud baseline)
-  sam_edge    : SAM 3.1 box -> padded crop -> EDGE Qwen read   (cloud locate, edge read)
+  sam_edge    : SAM 3.1 box -> padded crop -> EDGE read   (cloud locate, edge read)
   sam_muse    : SAM 3.1 box -> padded crop -> Muse Spark read  (fully cloud)
 
 Sets:
@@ -114,7 +114,7 @@ def main():
     n = len(out)
     print(f"\n=== {args.set} (n={n}) ===")
     for k, label in (("muse_full", "Muse Spark, full image (cloud)"),
-                     ("sam_edge", "SAM 3.1 crop -> edge Qwen read"),
+                     ("sam_edge", "SAM 3.1 crop -> edge read"),
                      ("sam_muse", "SAM 3.1 crop -> Muse read (cloud)")):
         answered = [o for o in out if "pred" in (o.get(k) or {})]
         print(f"{label:<38} {sum(o[k]['correct'] for o in answered):>2}/{n}  (answered {len(answered)})")

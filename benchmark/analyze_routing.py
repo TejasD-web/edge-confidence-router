@@ -7,25 +7,27 @@ Usage:
 
 Policy "agree(full, X)": answer on the edge with the full-image read when it matches view X,
 otherwise escalate the frame to Muse Spark (full image). A missing view counts as disagreement.
+Reads result files only; it calls no model. The edge model of a run is recorded in its JSON
+(summary.config.edge_model); older files without it are from the Qwen2.5-VL-3B comparison.
 """
 import sys, json, glob, os, argparse
 
 EDGE = "full_image"
 CLOUD = "muse_full"
 CONDITIONS = [
-    ("full_image", "Edge Qwen, full image"),
-    ("sam_crop", "Edge Qwen, center-point SAM 2.1 crop"),
-    ("vlm_box", "Edge Qwen, Qwen-grounded box crop"),
-    ("vlm_box_sam", "Edge Qwen, Qwen box -> SAM 2.1 crop"),
-    ("cloud_sam_edge_read", "SAM 3.1 crop -> edge Qwen read"),
+    ("full_image", "Edge, full image"),
+    ("sam_crop", "Edge, center-point SAM 2.1 crop"),
+    ("vlm_box", "Edge, edge-grounded box crop"),
+    ("vlm_box_sam", "Edge, edge box -> SAM 2.1 crop"),
+    ("cloud_sam_edge_read", "SAM 3.1 crop -> edge read"),
     ("cloud_sam_muse", "SAM 3.1 crop -> Muse Spark read"),
     ("muse_full", "Muse Spark, full image"),
 ]
 # (partner views, label, extra cloud calls per frame besides Muse escalations)
 POLICIES = [
     (["sam_crop"], "agree(full, center SAM 2.1 crop)", None),
-    (["vlm_box"], "agree(full, Qwen box crop)", None),
-    (["vlm_box_sam"], "agree(full, Qwen box -> SAM 2.1)", None),
+    (["vlm_box"], "agree(full, edge box crop)", None),
+    (["vlm_box_sam"], "agree(full, edge box -> SAM 2.1)", None),
     (["sam_crop", "vlm_box", "vlm_box_sam"], "agree(full, any edge crop)", None),
     (["cloud_sam_edge_read"], "agree(full, SAM 3.1 crop -> edge read)", "SAM 3.1 on every frame"),
 ]
@@ -83,7 +85,8 @@ def main():
     n = len(rows)
     has_cloud = any(CLOUD in r for r in rows)
 
-    lines = [f"Source: `{os.path.basename(path)}` ({n} frames)", ""]
+    edge_model = (data.get("summary", {}).get("config", {}) or {}).get("edge_model", "Qwen2.5-VL-3B (comparison run)")
+    lines = [f"Source: `{os.path.basename(path)}` ({n} frames, edge model: {edge_model})", ""]
 
     lines += ["| Condition | Accuracy | Mean read latency |", "|---|---|---|"]
     for label, c, tot, lat in condition_table(rows):

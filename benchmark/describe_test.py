@@ -11,7 +11,7 @@ Usage (repo root, fresh-ish memory):
   python benchmark/describe_test.py
 Then mark captions in the printed table (or in results/describe_*.json).
 """
-import os, sys, re, csv, json, math, time, base64, argparse
+import os, sys, re, csv, json, math, argparse
 from datetime import datetime
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -65,20 +65,7 @@ def id_confidence(toks):
 
 
 def edge_read(path):
-    import requests
-    with open(path, "rb") as f:
-        b64 = base64.b64encode(f.read()).decode()
-    t0 = time.time()
-    r = requests.post(rb.VLM_URL, json={
-        "model": "qwen2.5-vl",
-        "messages": [{"role": "user", "content": [
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
-            {"type": "text", "text": PROMPT}]}],
-        "max_tokens": MAX_TOKENS, "temperature": 0, "logprobs": True, "top_logprobs": 1,
-    }, timeout=180)
-    t = round(time.time() - t0, 3)
-    ch = r.json()["choices"][0]
-    return ch["message"]["content"].strip(), (ch.get("logprobs") or {}).get("content") or [], t
+    return rb.edge_chat(path, PROMPT, max_tokens=MAX_TOKENS, top_logprobs=1)
 
 
 def main():
@@ -90,10 +77,8 @@ def main():
 
     rows = list(csv.DictReader(open(args.labels, encoding="utf-8")))
     facts = {r["file"]: r["facts"] for r in csv.DictReader(open(args.facts, encoding="utf-8"))}
-    mem = next(int(l.split()[1]) for l in open("/proc/meminfo") if l.startswith("MemAvailable"))
-    if mem < 4_500_000:
-        sys.exit(f"[MEM] Only {mem // 1024} MB available. Drop caches: sync && sudo sysctl -w vm.drop_caches=3")
-    print(f"[CFG] mode 3 (EXPLORATORY), image budget {rb.READ_MAX_TOKENS} tokens, id threshold {THRESHOLD}")
+    rb.mem_check()
+    print(f"[CFG] mode 3 (EXPLORATORY), edge {rb.em.NAME} ({rb.em.MAX_TILES} tiles), id threshold {THRESHOLD}")
 
     out = []
     proc, _ = rb.start_vlm_server()
@@ -134,7 +119,8 @@ def main():
     print(f"Mean edge read: {sum(o['edge_s'] for o in out) / n:.2f}s   EXPLORATORY, n = {n}")
 
     path = os.path.join(rb.RESULTS_DIR, f"describe_explore_{datetime.now():%Y%m%d_%H%M%S}.json")
-    json.dump({"prompt": PROMPT, "threshold": THRESHOLD, "image_tokens": rb.READ_MAX_TOKENS,
+    json.dump({"prompt": PROMPT, "threshold": THRESHOLD,
+               "edge_model": f"{rb.em.MODEL_ID}@{rb.em.REVISION[:7]}", "edge_tiles": rb.em.MAX_TILES,
                "exploratory": True, "rows": out}, open(path, "w"), indent=2)
     print(f"[LOG] Wrote {path}")
 

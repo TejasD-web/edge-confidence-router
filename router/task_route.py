@@ -18,7 +18,7 @@ Custom prompts
 Queued frames (offline) for label and custom tasks go to results/queue_tasks/ with their prompt,
 so sync asks Muse the same question the edge was asked.
 """
-import os, sys, re, json, time, base64, shutil, threading
+import os, sys, re, json, shutil, threading
 from datetime import datetime
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -92,20 +92,8 @@ def score(task_name, answer, truth):
 
 
 def edge_read(image_path, prompt):
-    import requests
-    with open(image_path, "rb") as f:
-        b64 = base64.b64encode(f.read()).decode()
-    t0 = time.time()
-    r = requests.post(rb.VLM_URL, json={
-        "model": "qwen2.5-vl",
-        "messages": [{"role": "user", "content": [
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
-            {"type": "text", "text": prompt}]}],
-        "max_tokens": MAX_TOKENS, "temperature": 0, "logprobs": True, "top_logprobs": 1,
-    }, timeout=120)
-    t = round(time.time() - t0, 3)
-    ch = r.json()["choices"][0]
-    return ch["message"]["content"].strip(), (ch.get("logprobs") or {}).get("content") or [], t
+    """Edge read with per-token logprobs (Meta Perception LM 1B, router/edge_model.py)."""
+    return rb.edge_chat(image_path, prompt, max_tokens=MAX_TOKENS, top_logprobs=1)
 
 
 def route_task(image_path, task, max_tier=3):
