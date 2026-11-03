@@ -7,6 +7,9 @@ Built-in tasks
           (selected on the dev set). Routed by router/route.py; listed here for the dashboard only.
   label   labels and tags, pre-registered (data/labels/RUBRIC.md): label prompt, weakest-token
           confidence, threshold 0.90 fixed in advance.
+  loco    locomotive numbers, pre-registered (data/numbers/RUBRIC.md): the prompt states the format
+          (five digits); kept on-device only if the answer is exactly five digits AND the joint digit
+          probability >= the jersey dev threshold. Same rule as benchmark/number_test.py.
 
 Custom prompts
   Anyone can ask their own question: "Custom..." on the dashboard, POST /tasks {"prompt": ...}, or
@@ -25,7 +28,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 from router import route as rt               # new_record(), cloud_available(), CONF_THRESHOLD; chdirs to ROOT
 from benchmark import label_test as lt       # pre-registered label prompt, threshold, confidence, scoring
-rb, mc = rt.rb, rt.mc
+from benchmark import number_test as nt      # pre-registered locomotive prompt + format rule
+rb, mc, lp = rt.rb, rt.mc, rt.lp
 
 QUEUE_DIR = os.path.join(rb.RESULTS_DIR, "queue_tasks")
 QUEUE_FILE = os.path.join(QUEUE_DIR, "queue.jsonl")
@@ -40,6 +44,9 @@ BUILTIN = {
     "label": {"name": "label", "title": "Labels and tags", "prompt": lt.LABEL_PROMPT,
               "threshold": lt.THRESHOLD, "signal": "weakest token",
               "status": "fixed in advance, tested on 9 images", "builtin": True},
+    "loco": {"name": "loco", "title": "Locomotive numbers (format check)", "prompt": nt.PROMPT,
+             "threshold": rt.CONF_THRESHOLD, "signal": "joint digit probability + five-digit format check",
+             "status": "fixed in advance, tested on 25 images", "builtin": True, "format": nt.FORMAT.pattern},
 }
 
 
@@ -80,7 +87,7 @@ def add_custom(prompt):
 
 def clean(task_name, raw):
     """Label task: the pre-registered normalizer (uppercase, no separators). Custom: tidy free text."""
-    if task_name == "label":
+    if task_name in ("label", "loco"):
         return lt.norm(raw)
     s = re.sub(r"\s+", " ", (raw or "").strip().strip('"\'`')).strip()
     return s[:200] or None
@@ -102,18 +109,33 @@ def route_task(image_path, task, max_tier=3):
     rec, step, done = rt.new_record(image_path)
     rec.update({"task": name, "threshold": th, "conf_signal": task["signal"]})
     raw, toks, t = edge_read(rb.prep_read(image_path), prompt)
-    pred, c = clean(name, raw), lt.confidence(toks)
-    step("edge_full", pred, t, raw=raw, conf=c["min"])
+    pred = clean(name, raw)
+    if task.get("format"):
+        # Locomotive rule: joint digit probability (as for jerseys) AND the answer must match the format.
+        c = lp.confidence(toks)
+        conf, label = c["joint"], "joint digit probability"
+        fmt_ok = bool(pred) and bool(re.match(task["format"], pred))
+        rec["format_ok"] = fmt_ok
+        why_low = (f"format check failed ({pred!r} is not five digits)" if not fmt_ok
+                   else f"{label} {conf:.3f} < {th}")
+        ok = fmt_ok and conf >= th
+        why_ok = f"{label} {conf:.3f} >= {th}, format ok (five digits)"
+    else:
+        c = lt.confidence(toks)
+        conf, label = c["min"], "weakest token"
+        ok = pred is not None and conf >= th
+        why_low, why_ok = f"{label} {conf:.3f} < {th}", f"edge confidence ({label}) {conf:.3f} >= {th}"
+    step("edge_full", pred, t, raw=raw, conf=conf)
     rec["edge_conf"] = c
-    rec["conf_value"] = c["min"]
-    if pred is not None and c["min"] >= th:
-        return done(1, pred, f"edge confidence (weakest token) {c['min']:.3f} >= {th}{note}")
+    rec["conf_value"] = conf
+    if ok:
+        return done(1, pred, f"{why_ok}{note}")
     if max_tier < 3:
         rec["needs_queue"] = True
-        return done(1, pred, f"LOW CONFIDENCE: weakest token {c['min']:.3f} < {th}, offline; queued for verification{note}")
+        return done(1, pred, f"LOW CONFIDENCE: {why_low}, offline; queued for verification{note}")
     if not rt.cloud_available():
         rec["needs_queue"] = True
-        return done(1, pred, f"LOW CONFIDENCE: weakest token {c['min']:.3f} < {th}, no connection; queued for verification{note}")
+        return done(1, pred, f"LOW CONFIDENCE: {why_low}, no connection; queued for verification{note}")
     try:
         raw_m, t_m = mc.muse_read(image_path, prompt=prompt)
         rec["muse_calls"] += 1

@@ -230,7 +230,7 @@ function showCurrent(e) {
   const b = $("route"); b.hidden = false; b.className = "badge " + cls; b.textContent = label;
   current = e;
   const c = conf(e), th = threshOf(e);
-  $("conflabel").textContent = e.task && e.task !== "jersey" ? "edge confidence · weakest token" : "edge confidence";
+  $("conflabel").textContent = e.conf_signal ? "edge confidence · " + e.conf_signal : "edge confidence";
   $("confv").textContent = c == null ? "—" : c.toFixed(3);
   placeThresh(th);
   const fill = $("fill");
