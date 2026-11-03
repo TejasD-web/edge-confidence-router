@@ -4,6 +4,7 @@ Feed frames to the router service, like a camera would.
   python server/feed.py clip.mp4 --fps 2              # video -> frames (ffmpeg) -> /read
   python server/feed.py data/own/dev/                 # every jpg/png in a folder
   python server/feed.py a.jpg b.jpg --manifest data/own/dev/manifest.json   # attach truth for scoring
+  python server/feed.py data/labels/images/ --task label --manifest data/labels/labels.csv   # labels and tags
 
 Frames are sent one after another (the server serializes them anyway); --delay adds a pause
 between frames so the dashboard is watchable on video.
@@ -24,6 +25,9 @@ def video_frames(path, fps, out_dir):
 def load_truth(manifest):
     if not manifest:
         return {}
+    if manifest.endswith(".csv"):                      # data/labels/labels.csv: file,...,truth,...
+        import csv
+        return {r["file"]: r["truth"] for r in csv.DictReader(open(manifest, encoding="utf-8"))}
     data = json.load(open(manifest))
     if isinstance(data, dict):
         data = next(v for v in data.values() if isinstance(v, list))
@@ -37,7 +41,8 @@ def main():
     ap.add_argument("--fps", type=float, default=2.0, help="frames per second sampled from video")
     ap.add_argument("--delay", type=float, default=0.0, help="pause between frames (s)")
     ap.add_argument("--max-frames", type=int, default=0)
-    ap.add_argument("--manifest", help="JSON list of {image, truth|jersey_number} to score answers")
+    ap.add_argument("--manifest", help="JSON list of {image, truth|jersey_number}, or labels.csv, to score answers")
+    ap.add_argument("--task", choices=("jersey", "label"), default="jersey", help="what to read")
     args = ap.parse_args()
 
     truth = load_truth(args.manifest)
@@ -60,7 +65,7 @@ def main():
 
     print(f"[FEED] {len(frames)} frames -> {args.url}/read")
     for i, p in enumerate(frames, 1):
-        data = {}
+        data = {"task": args.task}
         t = truth.get(os.path.basename(p))
         if t:
             data["truth"] = t
@@ -71,10 +76,10 @@ def main():
             print(f"[FEED] {p}: HTTP {r.status_code} {r.text[:200]}")
             continue
         rec = r.json()
-        conf = (rec.get("edge_conf") or {}).get("joint")
+        conf = rec.get("conf_value", (rec.get("edge_conf") or {}).get("joint"))
         where = "QUEUED" if rec.get("queued") else ("CLOUD" if rec["left_device"] else "EDGE")
         mark = "" if rec.get("correct") is None else ("  ✓" if rec["correct"] else "  ✗")
-        print(f"[{i:>3}/{len(frames)}] {os.path.basename(p):<20} {str(rec['answer']):>6}  "
+        print(f"[{i:>3}/{len(frames)}] {os.path.basename(p):<20} {str(rec['answer']):>14}  "
               f"conf {conf if conf is not None else '-':<6} {where:<6} {rec['total_s']}s{mark}")
         if args.delay:
             time.sleep(args.delay)

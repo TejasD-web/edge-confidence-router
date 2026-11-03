@@ -9,9 +9,10 @@ Run (from the repo root, fresh-ish memory):
 Then open http://<jetson-ip>:8000 and feed frames:
   python server/feed.py clip.mp4 --fps 2
   python server/feed.py data/own/dev/            # a folder of images
+  python server/feed.py data/labels/images/ --task label     # labels and tags
 
 Endpoints:
-  POST /read          image upload (+ optional truth) -> routed answer, confidence, tier
+  POST /read          image upload (+ optional truth, task=jersey|label) -> routed answer, confidence, tier
   GET  /events        recent routed frames (dashboard polls this)
   GET  /mode          {"offline": bool}
   POST /mode          {"offline": bool}  -- "cut the link" for the demo
@@ -31,7 +32,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from router import route as rt              # chdirs to ROOT; brings rb (benchmark) + mc (Meta client)
+from router import label_route as lr        # label/tag task: own prompt, min-token confidence, own queue
 rb = rt.rb
+TASKS = ("jersey", "label")
 
 UPLOAD_DIR = os.path.join(rb.RESULTS_DIR, "uploads")    # gitignore this
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -85,8 +88,10 @@ def dashboard():
 
 
 @app.post("/read")
-def read(image: UploadFile = File(...), truth: str = Form(None)):
+def read(image: UploadFile = File(...), truth: str = Form(None), task: str = Form("jersey")):
     # Sync def: FastAPI runs it in a worker thread, so the blocking edge/Muse calls don't stall the loop.
+    if task not in TASKS:
+        raise HTTPException(422, f"task must be one of {TASKS}")
     if server_proc is not None and server_proc.poll() is not None:
         raise HTTPException(503, "llama-server died; see results/vlm_server.log and restart the service")
     ext = os.path.splitext(image.filename or "")[1].lower() or ".jpg"
@@ -99,17 +104,22 @@ def read(image: UploadFile = File(...), truth: str = Form(None)):
 
     max_tier = 1 if state["offline"] else 3
     with route_lock:
-        rec = rt.route_confidence(path, max_tier=max_tier)
+        if task == "label":
+            rec = lr.route_label(path, max_tier=max_tier)
+        else:
+            rec = rt.route_confidence(path, max_tier=max_tier)
     rec["policy"] = "confidence"
+    rec["task"] = task
     if rec.get("needs_queue"):
-        rt.enqueue(path, rec, truth)
+        (lr.enqueue if task == "label" else rt.enqueue)(path, rec, truth)
     if truth:
         rec["truth"] = truth
-        rec["correct"] = rb.score(rec["answer"] or "", truth)[0]
+        scorer = lr.lt.score if task == "label" else rb.score
+        rec["correct"] = scorer(rec["answer"] or "", truth)[0]
     rec["source"] = image.filename
     rec["frame_url"] = f"/frames/{name}"
     rec["offline"] = state["offline"]
-    rec["threshold"] = rt.CONF_THRESHOLD
+    rec.setdefault("threshold", rt.CONF_THRESHOLD)     # label frames carry their own (0.90)
     rec["at"] = datetime.now().isoformat(timespec="seconds")
 
     with state_lock:
@@ -143,10 +153,14 @@ def set_mode(m: Mode):
     return {"offline": state["offline"]}
 
 
-def _queue_entries():
+def _jersey_entries():
     if not os.path.exists(rt.QUEUE_FILE):
         return []
     return [json.loads(l) for l in open(rt.QUEUE_FILE) if l.strip()]
+
+
+def _queue_entries():
+    return _jersey_entries() + lr.entries()
 
 
 @app.get("/queue")
@@ -165,22 +179,32 @@ def sync():
         return {"verified": 0, "pending": 0, "log": "Queue is empty."}
     if not rt.cloud_available():
         raise HTTPException(503, f"Meta Model API unreachable; {pending} frames stay queued")
+    has_jersey = any(e["status"] == "unverified" for e in _jersey_entries())
+    has_label = any(e["status"] == "unverified" for e in lr.entries())
     buf = io.StringIO()
     with route_lock, contextlib.redirect_stdout(buf):
-        try:
-            rt.sync()
-        except SystemExit as e:          # sync() exits if the link drops mid-way
-            print(e)
+        for run, has in ((rt.sync, has_jersey), (lr.sync, has_label)):   # each queue asks its own question
+            if not has:
+                continue
+            try:
+                run()
+            except SystemExit as e:      # sync() exits if the link drops mid-way
+                print(e)
     after = _queue_entries()
     newly = [e for e in after if before.get(e["image"]) == "unverified" and e["status"] == "verified"]
     # Reflect sync results on the dashboard events.
     by_img = {e["image"]: e for e in newly}
     with state_lock:
+        src = {ev["image"]: ev.get("source") or ev["image"] for ev in state["events"]}   # upload name -> file name
         for ev in state["events"]:
             q = by_img.get(ev["image"])
             if q:
                 ev["synced"] = {"cloud_answer": q["cloud_answer"], "changed": q["corrected"],
-                                "correct": q.get("correct")}
+                                "correct": q.get("correct"), "edge_answer": ev["answer"]}
+                ev["answer"] = q["cloud_answer"]          # the router's answer is now the verified one
+                ev["reason"] = f"{ev['reason']} · verified by Muse Spark on sync"
+                if q.get("correct") is not None:
+                    ev["correct"] = q["correct"]
     return {
         "verified": len(newly),
         "pending": sum(e["status"] == "unverified" for e in after),
@@ -188,7 +212,7 @@ def sync():
         "changed": sum(e["corrected"] for e in newly),
         "fixed": sum(1 for e in newly if e.get("edge_correct") is False and e.get("correct")),
         "uploaded_mb": round(sum(e["bytes"] for e in newly) / 1e6, 2),
-        "results": [{"image": e["image"], "edge": e["edge_answer"], "cloud": e["cloud_answer"],
+        "results": [{"image": src.get(e["image"], e["image"]), "edge": e["edge_answer"], "cloud": e["cloud_answer"],
                      "changed": e["corrected"]} for e in newly],
         "log": buf.getvalue(),
     }
@@ -198,5 +222,7 @@ def sync():
 def reset():
     with state_lock:
         state["events"].clear()
+        state["next_id"] = 1          # restart frame numbering, so a fresh take counts from 1
     shutil.rmtree(rt.QUEUE_DIR, ignore_errors=True)
+    shutil.rmtree(lr.QUEUE_DIR, ignore_errors=True)
     return {"ok": True}

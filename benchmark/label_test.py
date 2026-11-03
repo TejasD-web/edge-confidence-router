@@ -83,14 +83,21 @@ def main():
     ap.add_argument("--labels", default="data/labels/labels.csv")
     ap.add_argument("--images", default="data/labels/images")
     ap.add_argument("--muse-all", action="store_true", help="also read every image with Muse (comparison)")
+    ap.add_argument("--prompt", help="override the edge/Muse prompt (EXPLORATORY: any non-default prompt was "
+                    "chosen after seeing these images; never report its number as a clean held-out result)")
     ap.add_argument("--image-tokens", type=int, default=rb.READ_MAX_TOKENS,
                     help="edge image budget (default 256 = pre-registered run). Anything else is EXPLORATORY "
                          "and is reported separately. Max 1024 (llama-server --image-max-tokens).")
     args = ap.parse_args()
-    exploratory = args.image_tokens != 256
+    global LABEL_PROMPT
+    if args.prompt:
+        LABEL_PROMPT = args.prompt
+    exploratory = args.image_tokens != 256 or bool(args.prompt)
     rb.READ_MAX_TOKENS = args.image_tokens       # prep_read() reads this module global at call time
     print(f"[CFG] edge image budget {args.image_tokens} tokens, threshold {THRESHOLD}"
           + ("  ** EXPLORATORY (post-hoc), not the pre-registered run **" if exploratory else ""))
+    if args.prompt:
+        print(f"[CFG] custom prompt: {LABEL_PROMPT!r}")
 
     rows = list(csv.DictReader(open(args.labels, encoding="utf-8")))
     mem = next(int(l.split()[1]) for l in open("/proc/meminfo") if l.startswith("MemAvailable"))

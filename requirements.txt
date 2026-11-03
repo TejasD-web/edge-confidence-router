@@ -1,0 +1,9 @@
+# Router, dashboard and benchmarks (Python 3.10 on the Jetson)
+requests
+pillow
+fastapi
+uvicorn
+python-multipart   # file uploads to /read
+matplotlib         # threshold sweep chart (benchmark/select_threshold.py)
+# Optional, only for the SAM 2.1 benchmark conditions in benchmark/run_benchmark.py:
+#   torch (Jetson build from NVIDIA), sam2 (facebookresearch/sam2)
