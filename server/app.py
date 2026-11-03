@@ -12,7 +12,8 @@ Then open http://<jetson-ip>:8000 and feed frames:
   python server/feed.py data/labels/images/ --task label     # labels and tags
 
 Endpoints:
-  POST /read          image upload (+ optional truth, task=jersey|label) -> routed answer, confidence, tier
+  POST /read          image upload (+ optional truth, task=<name>) -> routed answer, confidence, tier
+  GET  /tasks         available tasks; POST /tasks {"prompt": ...} adds a custom prompt for this server run
   GET  /events        recent routed frames (dashboard polls this)
   GET  /mode          {"offline": bool}
   POST /mode          {"offline": bool}  -- "cut the link" for the demo
@@ -32,9 +33,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from router import route as rt              # chdirs to ROOT; brings rb (benchmark) + mc (Meta client)
-from router import label_route as lr        # label/tag task: own prompt, min-token confidence, own queue
+from router import task_route as tr         # every task except jersey: labels + custom tasks, own queue
 rb = rt.rb
-TASKS = ("jersey", "label")
 
 UPLOAD_DIR = os.path.join(rb.RESULTS_DIR, "uploads")    # gitignore this
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -90,8 +90,9 @@ def dashboard():
 @app.post("/read")
 def read(image: UploadFile = File(...), truth: str = Form(None), task: str = Form("jersey")):
     # Sync def: FastAPI runs it in a worker thread, so the blocking edge/Muse calls don't stall the loop.
-    if task not in TASKS:
-        raise HTTPException(422, f"task must be one of {TASKS}")
+    t = tr.get_task(task)
+    if t is None:
+        raise HTTPException(422, f"unknown task {task!r}; see GET /tasks")
     if server_proc is not None and server_proc.poll() is not None:
         raise HTTPException(503, "llama-server died; see results/vlm_server.log and restart the service")
     ext = os.path.splitext(image.filename or "")[1].lower() or ".jpg"
@@ -104,22 +105,25 @@ def read(image: UploadFile = File(...), truth: str = Form(None), task: str = For
 
     max_tier = 1 if state["offline"] else 3
     with route_lock:
-        if task == "label":
-            rec = lr.route_label(path, max_tier=max_tier)
+        if task == "jersey":
+            rec = rt.route_confidence(path, max_tier=max_tier)     # the evaluated benchmark path, unchanged
         else:
-            rec = rt.route_confidence(path, max_tier=max_tier)
+            rec = tr.route_task(path, t, max_tier=max_tier)
     rec["policy"] = "confidence"
     rec["task"] = task
     if rec.get("needs_queue"):
-        (lr.enqueue if task == "label" else rt.enqueue)(path, rec, truth)
+        if task == "jersey":
+            rt.enqueue(path, rec, truth)
+        else:
+            tr.enqueue(path, rec, t, truth)
     if truth:
         rec["truth"] = truth
-        scorer = lr.lt.score if task == "label" else rb.score
-        rec["correct"] = scorer(rec["answer"] or "", truth)[0]
+        rec["correct"] = (rb.score(rec["answer"] or "", truth) if task == "jersey"
+                          else tr.score(task, rec["answer"], truth))[0]
     rec["source"] = image.filename
     rec["frame_url"] = f"/frames/{name}"
     rec["offline"] = state["offline"]
-    rec.setdefault("threshold", rt.CONF_THRESHOLD)     # label frames carry their own (0.90)
+    rec.setdefault("threshold", rt.CONF_THRESHOLD)     # other tasks carry their own
     rec["at"] = datetime.now().isoformat(timespec="seconds")
 
     with state_lock:
@@ -136,6 +140,24 @@ def events(since: int = 0):
         evs = [e for e in state["events"] if e["id"] > since]
         summ = _summary(state["events"])
     return {"events": evs, "summary": summ, "offline": state["offline"], "threshold": rt.CONF_THRESHOLD}
+
+
+class TaskIn(BaseModel):
+    prompt: str
+
+
+@app.get("/tasks")
+def tasks():
+    return {"tasks": tr.all_tasks()}
+
+
+@app.post("/tasks")
+def add_custom(t: TaskIn):
+    """A custom prompt for this server run only (in memory; gone when the server stops)."""
+    try:
+        return tr.add_custom(t.prompt)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
 
 
 class Mode(BaseModel):
@@ -160,7 +182,7 @@ def _jersey_entries():
 
 
 def _queue_entries():
-    return _jersey_entries() + lr.entries()
+    return _jersey_entries() + tr.entries()
 
 
 @app.get("/queue")
@@ -180,10 +202,10 @@ def sync():
     if not rt.cloud_available():
         raise HTTPException(503, f"Meta Model API unreachable; {pending} frames stay queued")
     has_jersey = any(e["status"] == "unverified" for e in _jersey_entries())
-    has_label = any(e["status"] == "unverified" for e in lr.entries())
+    has_task = any(e["status"] == "unverified" for e in tr.entries())
     buf = io.StringIO()
     with route_lock, contextlib.redirect_stdout(buf):
-        for run, has in ((rt.sync, has_jersey), (lr.sync, has_label)):   # each queue asks its own question
+        for run, has in ((rt.sync, has_jersey), (tr.sync, has_task)):    # each frame is re-asked its own question
             if not has:
                 continue
             try:
@@ -224,5 +246,5 @@ def reset():
         state["events"].clear()
         state["next_id"] = 1          # restart frame numbering, so a fresh take counts from 1
     shutil.rmtree(rt.QUEUE_DIR, ignore_errors=True)
-    shutil.rmtree(lr.QUEUE_DIR, ignore_errors=True)
+    shutil.rmtree(tr.QUEUE_DIR, ignore_errors=True)
     return {"ok": True}

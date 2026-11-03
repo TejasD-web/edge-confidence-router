@@ -42,3 +42,6 @@ results/queue/
 results/uploads/
 !results/threshold_probe_*.json
 !results/threshold_sweep_*.png
+results/queue/
+results/queue_tasks/
+results/uploads/

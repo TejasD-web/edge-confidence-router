@@ -5,6 +5,7 @@ Feed frames to the router service, like a camera would.
   python server/feed.py data/own/dev/                 # every jpg/png in a folder
   python server/feed.py a.jpg b.jpg --manifest data/own/dev/manifest.json   # attach truth for scoring
   python server/feed.py data/labels/images/ --task label --manifest data/labels/labels.csv   # labels and tags
+  python server/feed.py img.jpg --prompt "Read the number on the gauge. Reply with only the number."   # your own question
 
 Frames are sent one after another (the server serializes them anyway); --delay adds a pause
 between frames so the dashboard is watchable on video.
@@ -42,7 +43,8 @@ def main():
     ap.add_argument("--delay", type=float, default=0.0, help="pause between frames (s)")
     ap.add_argument("--max-frames", type=int, default=0)
     ap.add_argument("--manifest", help="JSON list of {image, truth|jersey_number}, or labels.csv, to score answers")
-    ap.add_argument("--task", choices=("jersey", "label"), default="jersey", help="what to read")
+    ap.add_argument("--task", default="jersey", help="task name: jersey, label, or a custom-N from this server run")
+    ap.add_argument("--prompt", help="ask your own question: registers a custom prompt on the server and uses it")
     args = ap.parse_args()
 
     truth = load_truth(args.manifest)
@@ -63,7 +65,12 @@ def main():
     if not frames:
         sys.exit("no frames found")
 
-    print(f"[FEED] {len(frames)} frames -> {args.url}/read")
+    if args.prompt:
+        r = requests.post(f"{args.url}/tasks", json={"prompt": args.prompt}, timeout=30)
+        r.raise_for_status()
+        args.task = r.json()["name"]
+        print(f"[FEED] custom prompt registered as {args.task} (uncalibrated; kept until the server stops)")
+    print(f"[FEED] {len(frames)} frames -> {args.url}/read  task={args.task}")
     for i, p in enumerate(frames, 1):
         data = {"task": args.task}
         t = truth.get(os.path.basename(p))

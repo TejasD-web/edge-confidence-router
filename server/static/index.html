@@ -4,14 +4,37 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Edge Router Live</title>
+<script>
+  // Theme before first paint, so there's no flash: "auto" (follow the browser), "light" or "dark".
+  try { const t = localStorage.getItem("zte-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (_) {}
+</script>
 <style>
   /* No external fonts or scripts: the device may be offline. */
-  :root {
+  :root {   /* dark (default) */
     --bg: #0e1114; --panel: #161a1f; --panel-2: #1c2128; --line: #2a313a;
     --text: #e6e9ed; --muted: #8b95a1;
     --edge: #3ecf8e; --cloud: #5b9dff; --queued: #f2b84b; --bad: #f2555a;
+    --viewer: #000; --overlay: rgba(14,17,20,.78);
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, "DejaVu Sans", sans-serif;
+    color-scheme: dark;
+  }
+  /* light: follows the browser in Auto, or forced with the header toggle */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f5f6f8; --panel: #ffffff; --panel-2: #eef1f4; --line: #d8dde3;
+      --text: #1b1f24; --muted: #5b6672;
+      --edge: #11805a; --cloud: #2d6bd3; --queued: #9a6206; --bad: #c62f35;
+      --viewer: #e4e7eb; --overlay: rgba(255,255,255,.88);
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f5f6f8; --panel: #ffffff; --panel-2: #eef1f4; --line: #d8dde3;
+    --text: #1b1f24; --muted: #5b6672;
+    --edge: #11805a; --cloud: #2d6bd3; --queued: #9a6206; --bad: #c62f35;
+    --viewer: #e4e7eb; --overlay: rgba(255,255,255,.88);
+    color-scheme: light;
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
@@ -27,16 +50,26 @@
            border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
   button:hover { border-color: var(--muted); }
   button:disabled { opacity: .5; cursor: default; }
-  main { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); gap: 16px; padding: 16px 20px; }
+  main { display: grid; grid-template-columns: minmax(0, 2.3fr) minmax(300px, 1fr); gap: 16px; padding: 16px 20px; }
+  main.expanded #current { grid-column: 1 / -1; }
+  main.expanded #viewer, main.expanded #empty { height: min(82vh, 980px); }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
 
   /* Current frame */
-  #current { position: relative; overflow: hidden; min-height: 320px; display: flex; flex-direction: column; }
-  #frame { width: 100%; height: 440px; object-fit: contain; background: #000; display: block; }
-  #empty { height: 440px; display: grid; place-items: center; color: var(--muted); text-align: center; padding: 20px; }
+  #current { position: relative; overflow: hidden; min-height: 320px; display: flex; flex-direction: column; align-self: start; }
+  #viewer { position: relative; height: min(66vh, 760px); background: var(--viewer); overflow: hidden; cursor: grab; touch-action: none; user-select: none; }
+  #viewer.drag { cursor: grabbing; }
+  #frame { position: absolute; left: 0; top: 0; max-width: none; display: block; -webkit-user-drag: none; }
+  #frame.pixel { image-rendering: pixelated; }      /* past native resolution: show crisp pixels, never smoothed blur */
+  .vctl { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; align-items: center; }
+  .vctl button { padding: 5px 9px; font: 600 12px var(--mono); background: var(--overlay); }
+  #zoomv { font: 600 12px var(--mono); color: var(--text); background: var(--overlay); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; min-width: 64px; text-align: center; }
+  .vhint { position: absolute; left: 10px; bottom: 8px; font: 11px var(--mono); color: var(--muted); background: var(--overlay); padding: 3px 7px; border-radius: 6px; }
+  #empty { height: min(66vh, 760px); display: grid; place-items: center; color: var(--muted); text-align: center; padding: 20px; }
   .readout { display: flex; align-items: center; gap: 18px; padding: 14px 18px; border-top: 1px solid var(--line); flex-wrap: wrap; }
-  #answer { font: 700 44px var(--mono); min-width: 110px; }
+  #answer { font: 700 44px var(--mono); min-width: 110px; max-width: 100%; overflow-wrap: anywhere; }
+  #answer.long { font-size: 20px; font-weight: 600; flex-basis: 100%; }
   .badge { font: 700 12px var(--mono); padding: 4px 9px; border-radius: 6px; letter-spacing: .5px; }
   .badge.edge { background: color-mix(in srgb, var(--edge) 18%, transparent); color: var(--edge); }
   .badge.cloud { background: color-mix(in srgb, var(--cloud) 18%, transparent); color: var(--cloud); }
@@ -60,6 +93,17 @@
   #synclog { padding: 10px 14px 14px; font: 12px var(--mono); color: var(--muted); max-height: 200px; overflow: auto; white-space: pre-wrap; }
   .drop { margin: 0 14px 14px; padding: 16px; border: 1px dashed var(--line); border-radius: 10px; text-align: center; color: var(--muted); cursor: pointer; }
   .drop.over { border-color: var(--cloud); color: var(--text); }
+  .field { font: 13px var(--sans); color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+  #taskinfo { padding: 6px 14px 0; font: 11px var(--mono); color: var(--muted); }
+  #taskprompt { padding: 4px 14px 0; font: 12px var(--sans); color: var(--text); }
+  dialog#customdlg { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 12px;
+                     padding: 18px; width: min(520px, calc(100vw - 32px)); }
+  dialog#customdlg::backdrop { background: rgba(0,0,0,.55); }
+  dialog#customdlg h2 { font-size: 15px; margin: 0 0 10px; }
+  dialog#customdlg textarea { width: 100%; min-height: 90px; resize: vertical; }
+  dialog#customdlg p { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+  .dlgbtns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  #customerr { color: var(--bad); font-size: 12px; min-height: 14px; margin-top: 6px; }
 
   /* History */
   #history { grid-column: 1 / -1; }
@@ -81,11 +125,20 @@
   <button id="toggle">Cut link</button>
   <button id="syncbtn">Sync queue</button>
   <button id="resetbtn">Reset</button>
+  <button id="themebtn" title="Theme: Auto follows your browser">Theme: Auto</button>
 </header>
 
 <main>
   <section id="current" class="card">
-    <img id="frame" alt="" hidden>
+    <div id="viewer" hidden>
+      <img id="frame" alt="">
+      <div class="vctl">
+        <button id="zout" title="Zoom out">−</button><span id="zoomv">fit</span><button id="zin" title="Zoom in">+</button>
+        <button id="z11" title="Actual pixels">1:1</button><button id="zfit" title="Fit to view">Fit</button>
+        <button id="zexp" title="Make the viewer wider">Expand</button>
+      </div>
+      <div class="vhint">scroll to zoom · drag to pan · double-click for actual pixels</div>
+    </div>
     <div id="empty">Waiting for frames…<br>python server/feed.py clip.mp4 --fps 2</div>
     <div class="readout">
       <div id="answer">—</div>
@@ -114,11 +167,22 @@
       <div class="section-h">Send an image</div>
       <div style="padding:10px 14px 0;display:flex;gap:8px;align-items:center;color:var(--muted);font-size:12px">
         Task
-        <select id="task" style="font:13px var(--sans);color:var(--text);background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:5px 8px">
+        <select id="task" class="field">
           <option value="jersey">Numbers (jersey benchmark)</option>
           <option value="label">Labels and tags</option>
         </select>
       </div>
+      <div id="taskinfo"></div>
+      <div id="taskprompt" hidden></div>
+      <dialog id="customdlg">
+        <h2>Ask your own question</h2>
+        <textarea id="cprompt" class="field" maxlength="600" placeholder="e.g. Read the number on the gauge. Reply with only the number."></textarea>
+        <div id="customerr"></div>
+        <p>Same router, same confidence check, but the threshold is <b>uncalibrated</b> for your prompt: no dev set chose it.
+           Short answers (a number, a code, a word) route best; free-text answers mostly go to Muse Spark.
+           Custom prompts last until the server stops.</p>
+        <div class="dlgbtns"><button id="ccancel">Cancel</button><button id="cuse">Use this prompt</button></div>
+      </dialog>
       <label class="drop" id="drop" style="display:block;margin-top:10px"><span id="droptext">Drop a jpg/png here, or click</span>
         <input id="file" type="file" accept="image/jpeg,image/png" hidden>
       </label>
@@ -155,14 +219,18 @@ function placeThresh(t) { $("thresh").style.left = (t * 100) + "%"; $("thresh").
 function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
 function showCurrent(e) {
-  $("empty").hidden = true;
-  const img = $("frame"); img.hidden = false; img.src = e.frame_url;
-  $("answer").textContent = e.answer ?? "?";
+  $("empty").hidden = true; $("viewer").hidden = false;
+  const img = $("frame");
+  if (!current || current.id !== e.id || img.dataset.url !== e.frame_url) {   // a different frame: load it, fit to view
+    img.dataset.url = e.frame_url; img.style.visibility = "hidden"; img.src = e.frame_url;
+  }
+  const ans = String(e.answer ?? "?");
+  $("answer").textContent = ans; $("answer").classList.toggle("long", ans.length > 16);
   const [cls, label] = routeOf(e);
   const b = $("route"); b.hidden = false; b.className = "badge " + cls; b.textContent = label;
   current = e;
   const c = conf(e), th = threshOf(e);
-  $("conflabel").textContent = e.task === "label" ? "edge confidence · weakest char" : "edge confidence";
+  $("conflabel").textContent = e.task && e.task !== "jersey" ? "edge confidence · weakest token" : "edge confidence";
   $("confv").textContent = c == null ? "—" : c.toFixed(3);
   placeThresh(th);
   const fill = $("fill");
@@ -173,6 +241,107 @@ function showCurrent(e) {
   document.querySelectorAll("#rows tr.sel").forEach(t => t.classList.remove("sel"));
   const tr = $("row-" + e.id); if (tr) tr.classList.add("sel");
 }
+
+// ── Image viewer: fit, zoom toward the cursor, pan. Sizes the <img> directly (no CSS scale), so the
+// browser resamples from the full-resolution upload: sharp up to native pixels, then pixelated, never blurred.
+const V = { s: 1, x: 0, y: 0, fit: 1, w: 0, h: 0 };
+const MAX_NATIVE = 8;                      // up to 8 screen pixels per image pixel
+function vbox() { const r = $("viewer").getBoundingClientRect(); return { w: r.width, h: r.height }; }
+function drawView() {
+  const img = $("frame"), eff = V.fit * V.s;           // screen pixels per image pixel
+  img.style.width = (V.w * eff) + "px"; img.style.height = (V.h * eff) + "px";
+  img.style.left = V.x + "px"; img.style.top = V.y + "px";
+  img.classList.toggle("pixel", eff > 1.0001);
+  $("zoomv").textContent = V.s <= 1.0001 ? "fit" : Math.round(eff * 100) + "%";
+}
+function fitView() {
+  const img = $("frame"), b = vbox();
+  if (!img.naturalWidth || !b.w) return;
+  V.w = img.naturalWidth; V.h = img.naturalHeight;
+  V.fit = Math.min(b.w / V.w, b.h / V.h); V.s = 1;
+  V.x = (b.w - V.w * V.fit) / 2; V.y = (b.h - V.h * V.fit) / 2;
+  drawView();
+}
+function zoomAt(newS, cx, cy) {
+  const maxS = Math.max(1, MAX_NATIVE / V.fit);
+  newS = Math.min(maxS, Math.max(1, newS));
+  if (newS === 1) return fitView();
+  V.x = cx - (cx - V.x) * (newS / V.s); V.y = cy - (cy - V.y) * (newS / V.s); V.s = newS;
+  drawView();
+}
+function center() { const b = vbox(); return [b.w / 2, b.h / 2]; }
+$("frame").onload = () => { fitView(); $("frame").style.visibility = "visible"; };
+window.addEventListener("resize", fitView);
+$("viewer").addEventListener("wheel", (ev) => {
+  ev.preventDefault();
+  const r = $("viewer").getBoundingClientRect();
+  zoomAt(V.s * Math.exp(-ev.deltaY * 0.0015), ev.clientX - r.left, ev.clientY - r.top);
+}, { passive: false });
+let dragFrom = null;
+$("viewer").addEventListener("pointerdown", (ev) => {
+  if (ev.target.closest(".vctl") || V.s <= 1) return;
+  dragFrom = { px: ev.clientX, py: ev.clientY, x: V.x, y: V.y };
+  $("viewer").classList.add("drag"); $("viewer").setPointerCapture(ev.pointerId);
+});
+$("viewer").addEventListener("pointermove", (ev) => {
+  if (!dragFrom) return;
+  V.x = dragFrom.x + ev.clientX - dragFrom.px; V.y = dragFrom.y + ev.clientY - dragFrom.py; drawView();
+});
+$("viewer").addEventListener("pointerup", () => { dragFrom = null; $("viewer").classList.remove("drag"); });
+$("viewer").addEventListener("dblclick", (ev) => {
+  if (ev.target.closest(".vctl")) return;
+  const r = $("viewer").getBoundingClientRect();
+  if (V.s > 1) return fitView();
+  zoomAt(Math.max(2, 1 / V.fit), ev.clientX - r.left, ev.clientY - r.top);   // actual pixels (or 2x if already larger)
+});
+$("zin").onclick = () => zoomAt(V.s * 1.5, ...center());
+$("zout").onclick = () => zoomAt(V.s / 1.5, ...center());
+$("zfit").onclick = () => fitView();
+$("z11").onclick = () => zoomAt(1 / V.fit, ...center());
+$("zexp").onclick = () => {
+  const on = document.querySelector("main").classList.toggle("expanded");
+  $("zexp").textContent = on ? "Shrink" : "Expand";
+  requestAnimationFrame(fitView);
+};
+
+// ── Tasks: built-ins, this session's custom prompts, and "Custom…" to ask your own question.
+const CUSTOM = "__custom__";
+let TASKS = [], lastTask = "jersey";
+function taskInfo() {
+  const t = TASKS.find(t => t.name === $("task").value);
+  $("taskinfo").textContent = t ? `${t.signal} · threshold ${t.threshold} · ${t.status}` : "";
+  $("taskprompt").hidden = !(t && !t.builtin);
+  if (t && !t.builtin) $("taskprompt").textContent = "Prompt: " + t.prompt;
+}
+async function loadTasks(select) {
+  try { TASKS = (await (await fetch("/tasks")).json()).tasks; } catch (_) { return; }
+  const keep = select || lastTask;
+  $("task").innerHTML = TASKS.map(t => `<option value="${esc(t.name)}" title="${esc(t.prompt)}">${esc(t.title)}</option>`).join("") +
+    `<option value="${CUSTOM}">Custom…</option>`;
+  $("task").value = TASKS.some(t => t.name === keep) ? keep : "jersey";
+  lastTask = $("task").value;
+  taskInfo();
+}
+$("task").onchange = () => {
+  if ($("task").value === CUSTOM) {
+    $("cprompt").value = ""; $("customerr").textContent = "";
+    $("customdlg").showModal(); $("cprompt").focus();
+    return;
+  }
+  lastTask = $("task").value; taskInfo();
+};
+function closeCustom() { $("customdlg").close(); }
+$("customdlg").addEventListener("close", () => { if ($("task").value === CUSTOM) $("task").value = lastTask; taskInfo(); });
+$("ccancel").onclick = closeCustom;
+$("cuse").onclick = async () => {
+  const prompt = $("cprompt").value.trim();
+  if (!prompt) { $("customerr").textContent = "Type a question first."; return; }
+  const r = await fetch("/tasks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt }) });
+  const d = await r.json();
+  if (!r.ok) { $("customerr").textContent = typeof d.detail === "string" ? d.detail : "Couldn't add that prompt."; return; }
+  lastTask = d.name; closeCustom(); await loadTasks(d.name);
+};
+$("cprompt").addEventListener("keydown", (ev) => { if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) $("cuse").click(); });
 
 // Click a row to view that frame; a new incoming frame switches the view back to live.
 let selectedId = null, maxSeen = 0;
@@ -192,7 +361,7 @@ function rowHtml(e) {
     const s = e.synced;
     after = `edge read ${esc(s.edge_answer ?? "?")} · ${s.changed ? "changed by Muse" : "confirmed by Muse"}`;
   }
-  return `<td>${e.id}</td><td><img src="${esc(e.frame_url)}" alt=""></td><td>${esc(e.source)}${e.task === "label" ? " · label" : ""}</td>` +
+  return `<td>${e.id}</td><td><img src="${esc(e.frame_url)}" alt=""></td><td>${esc(e.source)}${e.task && e.task !== "jersey" ? " · " + esc(e.task) : ""}</td>` +
     `<td><b>${esc(e.answer ?? "?")}</b></td><td>${c == null ? "—" : c.toFixed(3)}</td>` +
     `<td><span class="badge ${cls}">${label}</span></td><td>${e.total_s.toFixed(1)} s</td><td>${truth}</td><td>${after}</td>`;
 }
@@ -271,7 +440,7 @@ $("resetbtn").onclick = async () => {
   await fetch("/reset", {method: "POST"});
   await refreshAll();
   current = null; selectedId = null; maxSeen = 0;   // frame numbering restarts at 1
-  $("empty").hidden = false; $("frame").hidden = true; $("route").hidden = true;
+  $("empty").hidden = false; $("viewer").hidden = true; $("route").hidden = true;
   $("answer").textContent = "—"; $("confv").textContent = "—"; $("fill").style.width = "0";
   $("lat").textContent = "—"; $("reason").textContent = "";
   $("synclog").textContent = "Queue cleared.";
@@ -289,6 +458,23 @@ drop.ondragover = (ev) => { ev.preventDefault(); drop.classList.add("over"); };
 drop.ondragleave = () => drop.classList.remove("over");
 drop.ondrop = (ev) => { ev.preventDefault(); drop.classList.remove("over"); ev.dataTransfer.files[0] && sendFile(ev.dataTransfer.files[0]); };
 
+// Theme toggle: Auto (follow the browser) -> Light -> Dark. Remembered in this browser.
+const THEMES = ["auto", "light", "dark"];
+function applyTheme(t) {
+  if (t === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  $("themebtn").textContent = "Theme: " + t[0].toUpperCase() + t.slice(1);
+  requestAnimationFrame(fitView);
+}
+let theme = "auto";
+try { const t = localStorage.getItem("zte-theme"); if (THEMES.includes(t)) theme = t; } catch (_) {}
+applyTheme(theme);
+$("themebtn").onclick = () => {
+  theme = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
+  try { localStorage.setItem("zte-theme", theme); } catch (_) {}
+  applyTheme(theme);
+};
+
+loadTasks();
 poll();
 </script>
 </body>
