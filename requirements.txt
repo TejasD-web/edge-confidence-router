@@ -1,9 +1,13 @@
-# Router, dashboard and benchmarks (Python 3.10 on the Jetson)
+# Router, dashboard and benchmarks (Python 3.10 on the Jetson, JetPack 6)
+# Install PyTorch with CUDA for the Jetson FIRST (see README, "Run it"); pip's default torch is CPU-only on aarch64.
+transformers>=5.20      # Meta Perception LM 1B (PerceptionLMForConditionalGeneration)
+accelerate              # device_map="cuda": load the weights straight onto the GPU
+huggingface_hub         # gated download of facebook/Perception-LM-1B (hf auth login)
 requests
 pillow
 fastapi
 uvicorn
-python-multipart   # file uploads to /read
-matplotlib         # threshold sweep chart (benchmark/select_threshold.py)
-# Optional, only for the SAM 2.1 benchmark conditions in benchmark/run_benchmark.py:
-#   torch (Jetson build from NVIDIA), sam2 (facebookresearch/sam2)
+python-multipart        # file uploads to /read
+matplotlib              # threshold sweep chart (benchmark/select_threshold.py)
+# Optional, only for the SAM 2.1 benchmark condition in benchmark/run_benchmark.py:
+#   sam2 (facebookresearch/sam2)
