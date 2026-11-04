@@ -157,7 +157,11 @@ Looking back at the scores, a threshold around 0.70 would have kept the 2 best c
 **Setup** (Jetson Orin Nano 8 GB, JetPack 6, Python 3.10). pip's default aarch64 PyTorch is CPU-only, so install the CUDA build first (I used torch 2.11.0, CUDA 12.6):
 
 ```bash
+git clone https://github.com/TejasD-web/zero-training-edge-recognition.git
+cd zero-training-edge-recognition
+python3 -m venv .venv && source .venv/bin/activate
 pip install torch torchvision --index-url https://pypi.jetson-ai-lab.io/jp6/cu126
+
 pip install -r requirements.txt
 hf auth login                 # after requesting access at huggingface.co/facebook/Perception-LM-1B
 cp .env.example .env          # add MODEL_API_KEY=... for the cloud tier (offline mode needs no key)
