@@ -150,6 +150,8 @@ Looking back at the scores, a threshold around 0.70 would have kept the 2 best c
 
 **Access and licenses.** Perception LM 1B is gated on Hugging Face; Meta approved my access on Nov 3. Using it means accepting the FAIR Noncommercial Research License, so this is a research prototype, the weights are not in this repo, and the code downloads them on first run.
 
+**Cloud cost.** Every Meta Model API call made during the project cost $2.17 in total. That covers the Muse Spark reads and syncs in every test run, the SAM 3.1 experiments, the dashboard tests and the demo rehearsals. Reads on the device cost nothing per use.
+
 ---
 
 ## Run it
