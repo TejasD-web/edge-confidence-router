@@ -166,6 +166,14 @@ pip install -r requirements.txt
 hf auth login                 # after requesting access at huggingface.co/facebook/Perception-LM-1B
 cp .env.example .env          # add MODEL_API_KEY=... for the cloud tier (offline mode needs no key)
 ```
+**If `import torch` fails with `libcudss.so.0: cannot open shared object file`:** the Jetson PyTorch build looks for cuDSS as `libcudss.so.0`, but the pip package ships `libcudss.so.1`. Install only cuDSS (its dependencies include a cuBLAS build that doesn't run on the Jetson GPU), link the old name, and keep the system CUDA libraries first:
+
+```bash
+pip install --no-deps nvidia-cudss-cu12
+L=$(python -c "import site; print(site.getsitepackages()[0])")/nvidia/cu12/lib
+ln -sf libcudss.so.1 "$L/libcudss.so.0"
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$L:$LD_LIBRARY_PATH
+```
 
 The model (~3 GB) downloads on first run, pinned to commit `2b1a854`. Meta approves access manually, which can take time.
 
