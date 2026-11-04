@@ -2,7 +2,7 @@
 
 **An on-device camera reader that knows when it doesn't know.**
 
-This project is an edge-to-cloud router for reading numbers and codes from images. Meta's **Perception LM 1B** runs on an 8 GB Jetson Orin Nano and reads each image. It scores how sure it is from its own token probabilities, and only asks the cloud (Meta's **Muse Spark**) when it isn't sure. With no connection, it still answers right away, but marks the answers it isn't sure of as unverified and queues them to be checked once the connection is back: *read now, ask later.* There's no training and no fine-tuning.
+This project is an edge-to-cloud router for reading numbers and codes from images. Meta's **Perception LM 1B** runs on an 8 GB Jetson Orin Nano and reads each image. It scores how sure it is from its own token probabilities, and only asks the cloud (Meta's **Muse Spark**) when it isn't sure. A read on the device takes ~1.2 s; averaged over the held-out set, including the cloud calls, a frame takes ~4.2 s. With no connection, it still answers right away, but marks the answers it isn't sure of as unverified and queues them to be checked once the connection is back: *read now, ask later.* There's no training and no fine-tuning.
 
 **Where it could be used.** Anything that has to read short IDs where the network isn't reliable: a robot in a rail yard or plant identifying vehicles or parts, a handheld scanner at a remote site, an inspection camera in the field. It's a research prototype (the on-device model is licensed for noncommercial research only), and today it runs on the Jetson with a live dashboard fed by photos, not on a robot.
 
@@ -81,7 +81,7 @@ So any answer with fewer or more than five digits, or with a letter in it, can't
 - **Confidence caught the distractor** in `lo_002` (the example above).
 - **All 4 final errors came from the cloud.** Muse Spark got 12 of its 16 frames right, and once overwrote a correct edge answer (`lo_001`, 47543 → 47545).
 
-Results: [`results/numbers_20261103_105432.json`](results/numbers_20261103_105432.json).
+Results: [`results/plm_locomotives.json`](results/plm_locomotives.json).
 
 ### Jersey numbers: the benchmark
 
@@ -100,13 +100,13 @@ This is the set I used to choose the threshold and then test the router: 40 Wiki
 
 **Offline, then sync** (same 25 photos, connection cut): the edge answered all 25 at ~1.2 s each, 22 correctly; 14 were flagged as unverified and queued. After sync: **23/25**. Sync fixed 2 edge errors and overwrote 1 correct edge answer (`wm_014`, "14" → "0"); 3.70 MB uploaded.
 
-Results: [`results/route_20261103_052030.json`](results/route_20261103_052030.json), [`results/route_20261103_052242.json`](results/route_20261103_052242.json), [`results/sync_heldout_20261103.jsonl`](results/sync_heldout_20261103.jsonl).
+Results: [`results/plm_jersey_heldout_online.json`](results/plm_jersey_heldout_online.json), [`results/plm_jersey_heldout_offline.json`](results/plm_jersey_heldout_offline.json), [`results/plm_jersey_heldout_sync.jsonl`](results/plm_jersey_heldout_sync.jsonl).
 
 ### Labels and tags: beyond the on-device model
 
 Tracking numbers, part numbers, bin and location codes, postal codes: 9 free-to-use photos (Pexels) of shipping labels, an inspection tag and warehouse bin labels, with the labels and rubric committed before any run.
 
-**The on-device model couldn't read them, and the router correctly sent all 9 to the cloud** (7/9 correct after sync). With my first prompt, which listed the kinds of identifier to look for, the 1B model answered with the *kind* ("PART NUMBER") instead of the value. I then tried a second prompt (chosen after seeing that run, on the same 9 images, so reported separately) asking for "only the characters of the code, exactly as printed". The edge read 3 of 9 values correctly (a barcode, a part number, a postal code) and produced garbage on the long tracking labels. Every answer still scored below 0.90, so none were kept. A larger image didn't help.
+**The on-device model couldn't read them, so none were kept on the device and all 9 went to the cloud** (7/9 correct after sync). With my first prompt, which listed the kinds of identifier to look for, the 1B model answered with the *kind* ("PART NUMBER") instead of the value. I then tried a second prompt (chosen after seeing that run, on the same 9 images, so reported separately) asking for "only the characters of the code, exactly as printed". The edge read 3 of 9 values correctly (a barcode, a part number, a postal code) and produced garbage on the long tracking labels. Every answer still scored below 0.90, so none were kept. A larger image didn't help.
 
 Looking back at the scores, a threshold around 0.70 would have kept the 2 best correct reads and no wrong ones, but I picked 0.70 after seeing the answers, so it isn't a result. **For long codes, this model needs the cloud** (or a format rule per label type, see [Future work](#future-work)).
 
@@ -120,7 +120,7 @@ Looking back at the scores, a threshold around 0.70 would have kept the 2 best c
 
 **One honest caveat about the held-out set.** The same 25 photos were used once before, in the run with the earlier Qwen model (see [Earlier comparison](#earlier-comparison-non-meta-edge-model)). The commit history shows that after that run, the jersey prompt, the threshold rule and the routing rule did not change; the only change was the switch to Perception LM 1B that the organizers required, and its threshold was chosen on the dev set only.
 
-**The threshold rule:** the lowest value on a fixed list (`0.50 … 0.99`) at which every answer the edge would keep on the dev set is correct ([`benchmark/select_threshold.py`](benchmark/select_threshold.py)). The edge read 13 of 15 dev photos correctly, and the rule picked **0.80**, set by a single dev photo read wrongly at 0.763, so it rests on very little data. Sweep: [`results/threshold_sweep_20261103_051705.png`](results/threshold_sweep_20261103_051705.png).
+**The threshold rule:** the lowest value on a fixed list (`0.50 … 0.99`) at which every answer the edge would keep on the dev set is correct ([`benchmark/select_threshold.py`](benchmark/select_threshold.py)). The edge read 13 of 15 dev photos correctly, and the rule picked **0.80**, set by a single dev photo read wrongly at 0.763, so it rests on very little data. Sweep: [`results/plm_jersey_dev_threshold.png`](results/plm_jersey_dev_threshold.png).
 
 **Fixed before each run.** I committed every threshold, rubric and label file before its test run, ran each test once, and committed the result as it came out. The commit history shows that order, and every number here comes from a committed file in [`results/`](results/).
 
@@ -193,7 +193,7 @@ python benchmark/label_test.py                                                  
 **Check the results without a Jetson.** Every run's per-image answers and confidences are in `results/*.json`. To re-apply the threshold rule to the committed dev-set run without the model:
 
 ```bash
-python benchmark/select_threshold.py --from-json results/threshold_probe_20261103_051705.json --no-config
+python benchmark/select_threshold.py --from-json results/plm_jersey_dev_threshold.json --no-config
 ```
 
 Edge answers are deterministic (greedy decoding); Muse Spark answers can vary between runs.
