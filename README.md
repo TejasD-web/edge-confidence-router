@@ -1,6 +1,6 @@
-# Zero-Training Edge Recognition
+# Edge Confidence Router
 
-**An on-device camera reader that knows when it doesn't know.**
+**Read now, ask later: an on-device camera reader that knows when it doesn't know.**
 
 This project is an edge-to-cloud router for reading numbers and codes from images. Meta's **Perception LM 1B** runs on an 8 GB Jetson Orin Nano and reads each image. It scores how sure it is from its own token probabilities, and only asks the cloud (Meta's **Muse Spark**) when it isn't sure. A read on the device takes ~1.2 s; averaged over the held-out set, including the cloud calls, a frame takes ~4.2 s. With no connection, it still answers right away, but marks the answers it isn't sure of as unverified and queues them to be checked once the connection is back: *read now, ask later.* There's no training and no fine-tuning.
 
@@ -157,8 +157,8 @@ Looking back at the scores, a threshold around 0.70 would have kept the 2 best c
 **Setup** (Jetson Orin Nano 8 GB, JetPack 6, Python 3.10). pip's default aarch64 PyTorch is CPU-only, so install the CUDA build first (I used torch 2.11.0, CUDA 12.6):
 
 ```bash
-git clone https://github.com/TejasD-web/zero-training-edge-recognition.git
-cd zero-training-edge-recognition
+git clone https://github.com/TejasD-web/edge-confidence-router.git
+cd edge-confidence-router
 python3 -m venv .venv && source .venv/bin/activate
 pip install torch torchvision --index-url https://pypi.jetson-ai-lab.io/jp6/cu126
 
@@ -194,7 +194,7 @@ python benchmark/number_test.py                                                 
 python benchmark/label_test.py                                                                   # labels
 ```
 
-**Check the results without a Jetson.** Every run's per-image answers and confidences are in `results/*.json`. To re-apply the threshold rule to the committed dev-set run without the model:
+**Check the results without a Jetson.** Every run's per-image answers and confidences are in `results/`. To re-apply the threshold rule to the committed dev-set run without the model:
 
 ```bash
 python benchmark/select_threshold.py --from-json results/plm_jersey_dev_threshold.json --no-config
@@ -221,7 +221,7 @@ docs/         README figures (PNG) and their sources (.mmd charts, figure script
 
 ## Earlier comparison (non-Meta edge model)
 
-Until Nov 3 the on-device reader was Qwen2.5-VL-3B-Instruct (4-bit, llama.cpp). The organizers ruled that every model a project calls at runtime must be a Meta model, so I switched to Perception LM 1B. **Qwen is not part of the submitted project, and no code in this branch calls it.** Its results are kept for comparison because they came from the same data and rules; the code is at git tag [`qwen-comparison`](https://github.com/TejasD-web/zero-training-edge-recognition/tree/qwen-comparison).
+Until Nov 3 the on-device reader was Qwen2.5-VL-3B-Instruct (4-bit, llama.cpp). The organizers ruled that every model a project calls at runtime must be a Meta model, so I switched to Perception LM 1B. **Qwen is not part of the submitted project, and no code in this branch calls it.** Its results are kept for comparison because they came from the same data and rules; the code is at git tag [`qwen-comparison`](https://github.com/TejasD-web/edge-confidence-router/tree/qwen-comparison).
 
 | Same pipeline, same data | Qwen2.5-VL-3B (non-Meta, 4-bit) | **Perception LM 1B (Meta, bf16)** |
 | --- | --- | --- |
