@@ -1,7 +1,7 @@
 """
 Smoke test: can Meta's Perception LM run on the Orin Nano as the edge reader, with per-token confidence?
 
-Run in sam3-env (has CUDA torch). Reads one or more images with the jersey prompt and prints the
+Run in a Python env with CUDA PyTorch (see README, "Run it"). Reads one or more images with the jersey prompt and prints the
 answer, latency, per-token probabilities, joint probability and weakest token, plus peak GPU memory.
 
   python experiments/plm_edge/plm_smoke.py data/own/images/wm_013.jpg data/own/images/wm_007.jpg
@@ -17,7 +17,7 @@ JERSEY_PROMPT_FALLBACK = ("What is the jersey number of the player in this image
 
 
 def jersey_prompt():
-    """Read PROMPT from benchmark/run_benchmark.py without importing it (sam3-env lacks its deps)."""
+    """Read PROMPT from benchmark/run_benchmark.py without importing it (the edge env may not have its other dependencies)."""
     import ast
     src = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
                        "benchmark", "run_benchmark.py")
