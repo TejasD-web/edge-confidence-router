@@ -272,7 +272,7 @@ The smaller Meta model read jersey numbers much better and let the router keep a
 
 I built this during the hackathon (Oct 26 – Nov 4, 2026): the router, the evaluation, offline mode and sync, the dashboard, the SAM 2.1 setup, and every experiment here. The one thing that came before is the Jetson's base setup from an earlier project: JetPack, a llama.cpp build of Qwen2.5-VL-3B, and a profiling run of it. I first built and tested the router on that Qwen setup, then switched to Perception LM 1B and reran every test.
 
-I used Claude (Anthropic) for help with code, debugging, research and writing. I made the design decisions, collected and labeled the data, and ran and committed every experiment on the device.
+I used Claude (Anthropic) for help with coding, debugging, and research.
 
 ---
 
