@@ -1,274 +1,272 @@
 # Zero-Training Edge Recognition
 
-**A field robot's camera that knows when it doesn't know.**
+**An on-device camera reader that knows when it doesn't know.**
 
-Robots in warehouses, plants and the field have to read things: part tags, shipping labels, bin and location codes, sample markers. They also lose their network connection. This project is an edge-to-cloud router for that job. Meta's **Perception LM 1B** runs on an 8 GB Jetson Orin Nano, reads the image, scores how sure it is from its own token probabilities, and only calls the cloud (Meta's **Muse Spark**) when it isn't sure. With no connection, it still answers immediately, flags the unsure answers, and queues them for verification once the link comes back: *read now, ask later*.
+This project is an edge-to-cloud router for reading numbers and codes from images. Meta's **Perception LM 1B** runs on an 8 GB Jetson Orin Nano and reads each image. It scores how sure it is from its own token probabilities, and only asks the cloud (Meta's **Muse Spark**) when it isn't sure. With no connection, it still answers right away, but marks the answers it isn't sure of as unverified and queues them to be checked once the connection is back: *read now, ask later.* There's no training and no fine-tuning.
 
-No training and no fine-tuning: a threshold on the model's own confidence decides everything, and for the benchmark that threshold was picked once on a small dev set and then frozen.
+**Where it could be used.** Anything that has to read short IDs where the network isn't reliable: a robot in a rail yard or plant identifying vehicles or parts, a handheld scanner at a remote site, an inspection camera in the field. It's a research prototype (the on-device model is licensed for noncommercial research only), and today it runs on the Jetson with a live dashboard fed by photos, not on a robot.
 
-> Built solo for the Meta Global AI Developer Hackathon (indie track), Oct–Nov 2026.
+**Results in short.** On 25 locomotive photos, the router kept 9 numbers on the device, all 9 correct, with a format check catching the one confident mistake. On 25 held-out jersey photos it matched sending everything to the cloud (within noise) while answering 11 on the device. Long label codes are beyond the on-device model, so those go to the cloud.
+
+> Built for the Meta Global AI Developer Hackathon (indie developer track), Oct–Nov 2026. Demo video: <!-- TODO: video link -->
 
 ---
 
 ## How it works
 
-```mermaid
-flowchart LR
-    A[Camera frame] --> B["Edge: Perception LM 1B (Meta)<br/>Jetson Orin Nano, ~1.2 s"]
-    B --> C{"Confident?"}
-    C -- yes --> D[Answer on-device]
-    C -- "no, link up" --> E["Muse Spark<br/>Meta Model API"]
-    C -- "no, link down" --> F["Answer now, flag as unverified,<br/>queue the frame"]
-    F -- link restored --> E
-```
+![How the router decides](docs/how_it_works.png)
 
-**The confidence signal.** The model writes its answer one token at a time and assigns a probability to each token before choosing it. Those probabilities come out of the same forward pass that produces the answer, so confidence costs nothing extra: no second model, no second pass, no training. For short numbers the router uses the joint probability of the digits (threshold **0.80**, chosen on the dev set). For long codes, where a joint probability shrinks with length, it uses the weakest single token (threshold 0.90, fixed in advance).
+**The router** decides, for every image, whether to keep the on-device answer, send the image to Muse Spark, or (with no connection) keep the answer as unverified and queue the image for later.
 
-**Any task, one router.** The same router reads numbers and reads labels and tags; only the prompt changes. Anyone can ask their own question: pick **Custom…** on the dashboard and type a prompt, or pass `--prompt` to `feed.py`. Custom prompts live in memory until the server stops. They use the weakest-token signal with a threshold of 0.90 that is **uncalibrated**: no dev set chose it, so their on-device answers carry no tested accuracy, and the dashboard marks them that way. Short answers (a number, a code, a word) route best; free-text answers mostly go to Muse Spark, because token confidence can't check free text.
+**The confidence signal** is what it decides with. The model writes its answer one small piece (a token) at a time, and before writing each piece it gives every possible next piece a probability. If it sees the number clearly, almost all the probability goes to one choice; if it doesn't, the probability spreads across several guesses and the one it picks scores low. The router reads those probabilities straight from the model's output, so confidence costs nothing extra: no second model, no extra pass, no training.
+
+- **Numbers:** the router multiplies the probabilities of the digit pieces (the joint probability) and keeps the answer if it's at least **0.80**, a threshold chosen on a dev set.
+- **Long codes:** multiplying many pieces would drag even a good read toward zero, so the router uses the weakest single piece instead, with a threshold of 0.90 fixed in advance.
+- **Known ID formats:** if the site's IDs have a fixed format, the router also checks the answer against it (see [Locomotive numbers](#locomotive-numbers-a-known-id-format)).
+
+### An example
+
+![The edge reads the neighbouring locomotive's number](docs/confidence_lo_002.png)
+
+*Photo: Rob Newman, CC BY-SA 2.0 (Wikimedia Commons / Geograph), annotated. This figure is also CC BY-SA 2.0.*
+
+Asked for this locomotive's number, the edge answered **"37420"**: the number on the locomotive *next to* it. It wrote the answer in two pieces. These are its top guesses for each:
+
+<p>
+  <img src="docs/lo_002_piece1.png" alt="Piece 1: the model's top guesses" width="49%">
+  <img src="docs/lo_002_piece2.png" alt="Piece 2: the model's top guesses" width="49%">
+</p>
+
+The first piece was a near tie: "374" (the neighbour) at only 0.204, with "470", "474" and "477" close behind. Those start like the real number, 47617, so the model half-saw both. **Confidence = 0.204 × 0.826 = 0.168**, below 0.80, so the frame went to Muse Spark, which read **47617**. (Data: [`results/confidence_example.json`](results/confidence_example.json).)
+
+**What confidence can't catch** is a model that's confidently wrong, such as a dropped digit read at high confidence. That's what the format check is for, and it's why a few errors still get through on tasks without a known format.
+
+**Custom questions.** The same router works for any short-answer question: pick **Custom…** on the dashboard or pass `--prompt` to `feed.py`. Custom prompts use the weakest-piece signal with a 0.90 threshold that no dev set chose, so their on-device answers have no tested accuracy, and the dashboard says so.
 
 ---
 
-## Benchmark: how well does the router decide?
+## The dashboard
 
-To measure the routing decision itself, you need many real photos with an unambiguous right answer, varied difficulty and clear licensing. **Jersey numbers are used purely as that test set**: short printed numbers on real, often blurry or angled photos, the same shape of problem as a part number on a moving machine. The product is the router, not a sports tool.
+![The dashboard on the Jetson](docs/dashboard.png)
 
-Held-out set: 25 openly licensed Wikimedia Commons photos, never seen during development. The threshold was chosen on a separate dev set by a rule committed before any data was read, then frozen.
+*Four locomotive frames. The selected one (`lo_015`) scored 0.810, above the threshold, but the edge's answer "6679" failed the five-digit format check, so it went to Muse Spark, which read 66729. Photos: Wikimedia Commons, credited per image in [`data/numbers/labels.csv`](data/numbers/labels.csv) (`lo_015`: Peter Broster, CC BY 3.0).*
 
-| Pipeline | Correct | Answered on-device | Cloud calls |
+A web page served by the Jetson that shows the router working live. Images go in one at a time, the way a camera would send frames, and for each one it shows the answer, where it came from (**ON-DEVICE**, **MUSE SPARK**, **QUEUED**, or **QUEUED → MUSE SPARK** after sync), the confidence against the threshold with a one-line reason (for example "format check failed ('6679' is not five digits)"), and running totals.
+
+**Cut link** simulates losing the connection, and **Sync queue** sends the queued frames to Muse Spark once it's back. The task menu switches between locomotive numbers, labels and tags, jersey numbers, or **Custom…**. You can drop in your own image, or click any row to see its frame and zoom in. Commands to start it are in [Run it](#run-it).
+
+---
+
+## Results
+
+I tested the router on three sets of real photos, each with an unambiguous right answer, a range of difficulty and a license that allows this use. The author, license and link for every photo are listed in [`data/numbers/labels.csv`](data/numbers/labels.csv) (locomotives), [`data/own/ATTRIBUTION.md`](data/own/ATTRIBUTION.md) (jerseys) and [`data/labels/RUBRIC.md`](data/labels/RUBRIC.md) (labels). Jersey numbers are used purely as a test set: short printed numbers on real, often blurry or angled photos. The project is the router, not a sports tool.
+
+### Locomotive numbers: a known ID format
+
+A robot in a rail yard has to identify the unit in front of it from the number painted on it, and a real site knows what its IDs look like.
+
+**The known format.** Every British Railways locomotive number is exactly five digits, with no letters, usually painted as two digits, a space, then three (for example `66 729`).
+So any answer with fewer or more than five digits, or with a letter in it, can't be the right answer.
+
+**Rule.** The prompt tells the model this format. The router keeps an answer on the device only if it has exactly five digits **and** its confidence is at least 0.80, the jersey dev threshold, not re-tuned. I committed the rule, the 25 labels and the rubric ([`data/numbers/RUBRIC.md`](data/numbers/RUBRIC.md)) before the run, and ran it once. The photos are from Wikimedia Commons (7 easy, 8 medium, 10 hard).
+
+| Locomotive numbers (n = 25) | Result |
+| --- | --- |
+| Edge model alone | **16/25** correct, ~1.2 s per read |
+| Kept on-device (format **and** confidence) | **9/25, all 9 correct** |
+| Kept by confidence alone (for comparison) | 10/25, 9 correct, 1 wrong |
+| After sync with Muse Spark | **21/25** (16 cloud calls, 2.96 MB uploaded) |
+
+- **The format check caught the mistake confidence missed.** `lo_015` was read as "6679" (a dropped digit) at 0.810, above the threshold. Confidence alone would have kept it; the format rule sent it to the cloud, which read 66729.
+- **Confidence caught the distractor** in `lo_002` (the example above).
+- **All 4 final errors came from the cloud.** Muse Spark got 12 of its 16 frames right, and once overwrote a correct edge answer (`lo_001`, 47543 → 47545).
+
+Results: [`results/numbers_20261103_105432.json`](results/numbers_20261103_105432.json).
+
+### Jersey numbers: the benchmark
+
+This is the set I used to choose the threshold and then test the router: 40 Wikimedia Commons photos, split into 15 dev and 25 held-out (see [How it was evaluated](#how-it-was-evaluated)).
+
+| Held-out (n = 25) | Correct | Answered on-device | Cloud calls |
 | --- | --- | --- | --- |
-| **Confidence router** (edge, then Muse Spark if unsure) | **24/25 (96%)** | **11** | 14 |
-| Edge alone (Perception LM 1B on the Jetson) | 22/25 (88%) | 25 | 0 |
-| Muse Spark alone, full image (cloud) | 22/25 | 0 | 25 |
+| **Confidence router** (edge, then Muse Spark if unsure) | **24/25** | **11** | 14 |
+| Edge only (Perception LM 1B on the Jetson) | 22/25 | 25 | 0 |
+| Muse Spark only, full image (cloud) | 22/25 | 0 | 25 |
 | SAM 3.1 crop → Muse Spark (cloud) | 22/25 | 0 | 48 |
 
-- **The router matches or beats sending every frame to the cloud, while answering 11 of 25 frames on-device** (~1.2 s each) and staying usable offline.
-- **2 of the edge's 3 errors scored far below the threshold** (0.165 and 0.391) and went to the cloud. One did not: `wm_027`, read as "14" at 0.908 (truth 40), the router's only confident error.
-- **14 of the 14 frames sent to Muse Spark came back correct.** 12 of those 14 were already right on the edge (several just under the threshold, e.g. 0.799 and 0.780): the dev-set rule is conservative by design.
-- Images with two equally prominent numbers list both as correct answers, decided by a size rule before any run ([`data/own/RUBRIC.md`](data/own/RUBRIC.md)).
-- The cloud-only rows come from a separate run (Nov 2) and involve no edge model. Muse Spark is not deterministic: its answers on the same images varied between runs (see [Limits](#limits)).
+- **The router matches sending every frame to the cloud, within noise,** while answering 11 of 25 on the device (~1.2 s each) and working offline. The 24 vs. 22 gap is two photos, and the cloud-only rows come from a separate run (Nov 2) of a model whose answers vary between runs, so I don't read it as "better".
+- **2 of the edge's 3 errors had very low confidence** (0.165, 0.391) and went to the cloud. One didn't: `wm_027`, read as "14" at 0.908 (truth 40), the router's only confident error.
+- **The threshold is conservative.** 12 of the 14 frames sent to the cloud were already right on the edge, several just under 0.80.
 
-Results: [`results/route_20261103_052030.json`](results/route_20261103_052030.json).
+**Offline, then sync** (same 25 photos, connection cut): the edge answered all 25 at ~1.2 s each, 22 correctly; 14 were flagged as unverified and queued. After sync: **23/25**. Sync fixed 2 edge errors and overwrote 1 correct edge answer (`wm_014`, "14" → "0"); 3.70 MB uploaded.
 
-### Offline mode and sync
+Results: [`results/route_20261103_052030.json`](results/route_20261103_052030.json), [`results/route_20261103_052242.json`](results/route_20261103_052242.json), [`results/sync_heldout_20261103.jsonl`](results/sync_heldout_20261103.jsonl).
 
-Same 25 images, link cut:
+### Labels and tags: beyond the on-device model
 
-| | Result |
-| --- | --- |
-| Offline (edge only) | **22/25 correct**, ~1.2 s per frame, no network |
-| Flagged as unverified and queued | 14 frames (12 of them already correct) |
-| After the link returns and the queue syncs | **23/25**: 2 edge errors fixed, 1 correct edge answer overwritten by Muse (`wm_014`, "14" → "0"); 3.70 MB uploaded |
+Tracking numbers, part numbers, bin and location codes, postal codes: 9 free-to-use photos (Pexels) of shipping labels, an inspection tag and warehouse bin labels, with the labels and rubric committed before any run.
 
-Results: [`results/route_20261103_052242.json`](results/route_20261103_052242.json), [`results/sync_heldout_20261103.jsonl`](results/sync_heldout_20261103.jsonl).
+**The on-device model couldn't read them, and the router correctly sent all 9 to the cloud** (7/9 correct after sync). With my first prompt, which listed the kinds of identifier to look for, the 1B model answered with the *kind* ("PART NUMBER") instead of the value. I then tried a second prompt (chosen after seeing that run, on the same 9 images, so reported separately) asking for "only the characters of the code, exactly as printed". The edge read 3 of 9 values correctly (a barcode, a part number, a postal code) and produced garbage on the long tracking labels. Every answer still scored below 0.90, so none were kept. A larger image didn't help.
 
-### Threshold selection (dev set, n = 15)
-
-![Threshold sweep on the dev set](results/threshold_sweep_20261103_051705.png)
-
-Rule ([`benchmark/select_threshold.py`](benchmark/select_threshold.py)): the smallest value in `[0.50, 0.60, 0.70, 0.80, 0.85, 0.90, 0.95, 0.98, 0.99]` at which every answer the edge would keep on dev is correct. On dev the edge read 13/15 correctly; the rule selected **0.80** (set by one dev image read wrongly at 0.763), keeping 9 of 15 frames on-device, all 9 correct. It was written to [`config/threshold.json`](config/threshold.json) and committed before the single held-out run.
+Looking back at the scores, a threshold around 0.70 would have kept the 2 best correct reads and no wrong ones, but I picked 0.70 after seeing the answers, so it isn't a result. **For long codes, this model needs the cloud** (or a format rule per label type, see [Future work](#future-work)).
 
 ---
 
-## Reading labels and tags
+## How it was evaluated
 
-The task a field robot actually faces: tracking numbers, part numbers, bin and location codes, postal codes. Tested on 9 openly licensed photos (Pexels) of shipping labels, an inspection tag on steel beams and warehouse bin labels, with the labels and rubric committed before any run ([`data/labels/RUBRIC.md`](data/labels/RUBRIC.md)).
+**Labels and difficulty were set by hand before any model saw the images**, using written rules ([`data/own/RUBRIC.md`](data/own/RUBRIC.md), [`data/numbers/RUBRIC.md`](data/numbers/RUBRIC.md)): *easy* means large, sharp and facing the camera; *medium* means small, angled or with a competing number; *hard* means blur, low light, film grain, a partly hidden number or a distracting number nearby. Both number sets lean hard on purpose, so the on-device rates are on the low side.
 
-| Pre-registered run (n = 9) | Result |
-| --- | --- |
-| Edge model alone | **0/9** |
-| Answers the edge kept as confident | **0**, so **0 confident errors** |
-| After sync with Muse Spark | **7/9** |
+**Dev set and held-out set.** A script split the 40 jersey photos with a fixed random seed ([`scripts/build_manifests.py`](scripts/build_manifests.py), seed `20261101`), taking the same share of each difficulty for both groups, so nobody picked which photo went where. The **dev set** (15) is the only data used to choose the threshold. The **held-out set** (25) shows how the router does on photos the threshold wasn't chosen on.
 
-With the pre-registered prompt, which lists the kinds of identifier to look for, the 1B model answered with the **kind** ("PART NUMBER", "TRACKING NUMBER") instead of the value. Every one of those answers scored far below the threshold (weakest token 0.18–0.46), so nothing wrong was reported as confident.
+**One honest caveat about the held-out set.** The same 25 photos were used once before, in the run with the earlier Qwen model (see [Earlier comparison](#earlier-comparison-non-meta-edge-model)). The commit history shows that after that run, the jersey prompt, the threshold rule and the routing rule did not change; the only change was the switch to Perception LM 1B that the organizers required, and its threshold was chosen on the dev set only.
 
-**Exploratory follow-up** (prompt chosen after seeing that run, same 9 images, reported separately): asking for "only the characters of the code, exactly as printed", the edge read **3 of 9 values** correctly (a barcode, a part number, a postal code), with near misses on others and garbage on the long tracking labels. All answers still scored below 0.90, so none were kept; the garbage reads scored lowest of all (0.02–0.04). A larger image (8 tiles instead of 4) did not help (2/9).
+**The threshold rule:** the lowest value on a fixed list (`0.50 … 0.99`) at which every answer the edge would keep on the dev set is correct ([`benchmark/select_threshold.py`](benchmark/select_threshold.py)). The edge read 13 of 15 dev photos correctly, and the rule picked **0.80**, set by a single dev photo read wrongly at 0.763, so it rests on very little data. Sweep: [`results/threshold_sweep_20261103_051705.png`](results/threshold_sweep_20261103_051705.png).
 
-So **on-device, Perception LM 1B reads jersey numbers reliably but long label codes only partly; labels mostly need the cloud.** Offline, the robot still keeps its best guess for every label, flagged as unverified, until it can sync. Across every variant, the edge never kept a wrong label answer.
+**Fixed before each run.** I committed every threshold, rubric and label file before its test run, ran each test once, and committed the result as it came out. The commit history shows that order, and every number here comes from a committed file in [`results/`](results/).
 
 ---
 
-## Evaluation method
+## Hardware
 
-- **Data you can check.** 40 jersey photos from Wikimedia Commons under CC0, CC BY, CC BY-SA or public domain ([`data/own/ATTRIBUTION.md`](data/own/ATTRIBUTION.md)) and 9 label photos from Pexels. An early prototype used web images whose license didn't allow evaluation use; they were removed from the repo history and none of their results are reported.
-- **Rules before results.** Rubrics, labels and splits were committed before any model saw the images.
-- **No hand-picking.** A seeded, difficulty-stratified split ([`scripts/build_manifests.py`](scripts/build_manifests.py), seed `20261101`): 15 dev, 25 held-out, deliberately hard-weighted (9 easy, 15 medium, 16 hard).
-- **One shot at the held-out set.** The threshold was committed before the held-out run and not tuned afterwards. Every number here comes from a committed file in [`results/`](results/), and the commit history shows the order.
+**Running on constrained hardware is the point.** A robot can't carry a workstation, so the reader has to fit the kind of small, low-power board robots actually use: a **Jetson Orin Nano Super Developer Kit** with a 6-core Arm Cortex-A78AE CPU, a 1024-core NVIDIA Ampere GPU and **8 GB of memory shared by the CPU and GPU**, in a 7–25 W power budget.
 
----
+**A regular laptop would be easier.** A laptop with its own NVIDIA graphics card has separate GPU memory, so none of the memory problems below would come up. The code expects an NVIDIA GPU on Linux, so a laptop like that should run it unchanged; other laptops would need small changes. I haven't tested either: every result here comes from the Jetson.
 
-## Segmentation: what was tried
+**Edge model:** [`facebook/Perception-LM-1B`](https://huggingface.co/facebook/Perception-LM-1B) at commit `2b1a854`, ~1.5B parameters, bf16, run in-process with Hugging Face transformers ([`router/edge_model.py`](router/edge_model.py)). Weights SHA-256: `bc606ce0cf9fcbcd9b5b133d017cb46abb088877cb28aac6382369faab5926f8`.
 
-The original design put Meta's Segment Anything in front of the reader. The shipped router has no segmentation, and here is why.
+**The memory problem.** On the Jetson, GPU memory comes out of system RAM, and allocations fail (`NvMap … error 12`) rather than free up the file cache. Two changes made the model load and run reliably: loading the weights straight onto the GPU (`device_map="cuda"`) instead of through the CPU, which briefly needs two copies; and evicting the weights file from the file cache after loading (`posix_fadvise`), so ~3 GB of cached pages don't block later GPU allocations.
 
-| Model | Where | Outcome |
-| --- | --- | --- |
-| SAM 2.1 | On the Jetson | Evaluated in segment-then-read cascades with the earlier edge model (see [Earlier comparison](#earlier-comparison-a-non-meta-edge-model)); cropping lowered reading accuracy on jerseys and labels, so it was dropped. |
-| SAM 3 (841M) | On the Jetson | **Runs on-device**: ~1.2–1.4 s per image, ~4 GB peak GPU memory, with randomly initialized weights while access to the gated weights is pending. A feasibility result only: accuracy can't be measured without the real weights. With the reader's ~3.1 GB it doesn't fit in 8 GB at the same time, so it would need a load/unload design. Notes: [`experiments/sam3_local/NOTES.md`](experiments/sam3_local/NOTES.md). |
-| SAM 3.1 | Meta Model API (cloud) | As cloud-side localization: found a jersey number in 23 of 25 held-out images and every label in the label set; SAM 3.1 crop → Muse Spark scored 22/25 on jerseys. |
-
-Cloud SAM 3.1 results describe the cloud model only; they are not an estimate of how SAM 3 would score on the device.
-
----
-
-## Jetson engineering
-
-Hardware: Jetson Orin Nano Super Developer Kit, 8 GB (CPU and GPU share the same memory). Edge model: [`facebook/Perception-LM-1B`](https://huggingface.co/facebook/Perception-LM-1B) at commit `2b1a854`, ~1.5B parameters, bf16, run in-process with Hugging Face transformers ([`router/edge_model.py`](router/edge_model.py)). Weights SHA-256: `bc606ce0cf9fcbcd9b5b133d017cb46abb088877cb28aac6382369faab5926f8`.
-
-**The memory problem.** On Jetson, GPU allocations come from system RAM through the `nvmap` allocator, and they fail (`NvMap … error 12`) rather than evict the page cache. (Earlier notes in this project blamed the CMA pool; that diagnosis was wrong.) Two things made the model load and run reliably:
-
-- **Load straight onto the GPU** (`device_map="cuda"`). Loading on the CPU and then moving to the GPU briefly holds two copies of the weights in the shared 8 GB and fails.
-- **Evict the weights file from the page cache after loading** (`posix_fadvise(DONTNEED)`). The ~3 GB of cached file pages otherwise block later GPU allocations even though `free` counts them as available. With this, no manual `drop_caches` is needed between runs.
-
-A startup guard still refuses to start below 3.5 GB `MemAvailable`, with `sync && sudo sysctl -w vm.drop_caches=3` as the remedy.
-
-**Speed and memory.** Each frame is tiled by the model's own processor (4 tiles of 448 px, 1,347 input tokens). Warm reads take **~1.2 s** at ~3.1 GB peak GPU memory; the first read after loading takes ~4 s, and loading takes ~9 s. Mean routed latency on the held-out set is ~4.2 s, dominated by cloud calls.
+**Speed and memory.** Warm reads take **~1.2 s** at ~3.1 GB peak GPU memory (4 tiles of 448 px per image); loading takes ~9 s. Mean routed latency on the held-out set is ~4.2 s, mostly cloud calls.
 
 ---
 
 ## Meta models used
 
-- **Perception LM 1B** (`facebook/Perception-LM-1B`, FAIR Noncommercial Research License): the on-device reader and the source of the confidence signal, in the live path for every frame. Runs on the Jetson.
-- **Muse Spark** (`muse-spark-1.3`, Meta Model API): the cloud tier, in the live path for every low-confidence frame and every queued frame on sync.
-- **SAM 3.1** (`sam-3.1`, Meta Model API): evaluated as cloud-side localization.
-- **SAM 3** (openly released weights under the SAM License; gated download): built and run on the Jetson for feasibility; real weights pending access approval.
-- **SAM 2.1** (open weights): evaluated on the Jetson in the segmentation cascades.
+- **Perception LM 1B** (`facebook/Perception-LM-1B`, FAIR Noncommercial Research License): the on-device reader and the source of the confidence signal, in the live path for every frame.
+- **Muse Spark** (`muse-spark-1.3`, Meta Model API): the cloud tier, for every low-confidence frame and every queued frame on sync.
+- **SAM 3.1** (`sam-3.1`, Meta Model API): evaluated as cloud-side localization. It found the number in 23 of 25 held-out jersey photos and every label; SAM 3.1 crop → Muse Spark scored 22/25, no better than Muse Spark alone.
+- **SAM 2.1** (open weights, on the Jetson): evaluated as a crop-then-read step with the earlier edge model. Cropping made reading worse on jerseys and labels, so I dropped it.
+- **SAM 3** (open weights, gated): built and run on the Jetson for feasibility only (~1.2–1.4 s per image, ~4 GB), with random weights while my access request is pending. Notes: [`experiments/sam3_local/NOTES.md`](experiments/sam3_local/NOTES.md).
+
+**Access and licenses.** Perception LM 1B is gated on Hugging Face; Meta approved my access on Nov 3. Using it means accepting the FAIR Noncommercial Research License, so this is a research prototype, the weights are not in this repo, and the code downloads them on first run.
 
 ---
 
 ## Run it
 
-**Hardware.** A Jetson Orin Nano (8 GB) on JetPack 6.
-
-**Python 3.10 with CUDA PyTorch.** pip's default aarch64 wheel is CPU-only, so install PyTorch from the Jetson AI Lab index for JetPack 6 first (this project used torch 2.11.0 with CUDA 12.6), then the rest:
+**Setup** (Jetson Orin Nano 8 GB, JetPack 6, Python 3.10). pip's default aarch64 PyTorch is CPU-only, so install the CUDA build first (I used torch 2.11.0, CUDA 12.6):
 
 ```bash
 pip install torch torchvision --index-url https://pypi.jetson-ai-lab.io/jp6/cu126
-```
-
-Then:
-
-```bash
 pip install -r requirements.txt
+hf auth login                 # after requesting access at huggingface.co/facebook/Perception-LM-1B
+cp .env.example .env          # add MODEL_API_KEY=... for the cloud tier (offline mode needs no key)
 ```
 
-**The model** is gated on Hugging Face: request access at [`facebook/Perception-LM-1B`](https://huggingface.co/facebook/Perception-LM-1B), then log in on the device. It downloads (~3 GB) on first run, pinned to commit `2b1a854`.
+The model (~3 GB) downloads on first run, pinned to commit `2b1a854`. Meta approves access manually, which can take time.
 
-```bash
-export HF_HOME=/path/with/space      # optional: keep the download off a small boot drive
-hf auth login                        # a Read token is enough
-```
-
-**Meta Model API key** (only the cloud tier needs it):
-
-```bash
-cp .env.example .env      # then put your key in .env as MODEL_API_KEY=...
-```
-
-Offline mode works without a key.
-
-**The live demo** (the dashboard shown in the video):
+**The dashboard:**
 
 ```bash
 uvicorn server.app:app --host 0.0.0.0 --port 8000
+# open http://<jetson-ip>:8000, or tunnel: ssh -N -q -L 8000:localhost:8000 <jetson>
 
-# in a second terminal: feed images like a camera would
-python server/feed.py data/own/images/ --manifest data/own/labels.csv --delay 2
+# in another terminal, feed images like a camera would:
+python server/feed.py data/numbers/images/ --task loco --manifest data/numbers/labels.csv --delay 2
 python server/feed.py data/labels/images/ --task label --manifest data/labels/labels.csv --delay 2
+python server/feed.py data/own/images/ --manifest data/own/labels.csv --delay 2
+python server/feed.py img.jpg --prompt "Read the number on the gauge. Reply with only the number."
 ```
 
-Open `http://<jetson-ip>:8000` (or tunnel: `ssh -N -q -L 8000:localhost:8000 <jetson>`). Each frame shows the answer, a confidence bar against the threshold, and where the answer came from: ON-DEVICE, MUSE SPARK, QUEUED, or QUEUED → MUSE SPARK after sync. **Cut link** simulates an outage and **Sync queue** verifies the queued frames. Click any row to view its frame; scroll to zoom (sharp up to the photo's actual pixels), drag to pan, and **Expand** for a wider view. Drop in your own image and pick a task, or choose **Custom…** to ask your own question. From the command line: `python server/feed.py img.jpg --prompt "Read the number on the gauge. Reply with only the number."`
-
-**Reproduce the numbers:**
+**Reproduce the numbers** (on the Jetson):
 
 ```bash
-# re-derive the threshold from the dev set (pre-registered rule)
-python benchmark/select_threshold.py --manifest data/own/dev.json --image-dir data/own/images
-
-# benchmark: routed run on the held-out set
-python router/route.py --manifest data/own/heldout.json --image-dir data/own/images
-
-# offline, then sync
-python router/route.py --clear-queue
+python benchmark/select_threshold.py --manifest data/own/dev.json --image-dir data/own/images   # threshold
+python router/route.py --manifest data/own/heldout.json --image-dir data/own/images             # held-out
+python router/route.py --clear-queue                                                             # offline, then sync
 python router/route.py --manifest data/own/heldout.json --image-dir data/own/images --max-tier 1
 python router/route.py --sync
-
-# labels and tags (pre-registered), then the exploratory prompt
-python benchmark/label_test.py
-python benchmark/label_test.py --prompt "Read the code printed on the label in this image. Reply with only the characters of the code, exactly as printed, and nothing else."
-
-# cloud comparisons
-python benchmark/cloud_sam_test.py --set jerseys
+python benchmark/number_test.py                                                                  # locomotives
+python benchmark/label_test.py                                                                   # labels
 ```
 
-Edge answers are deterministic (greedy decoding); Muse Spark answers can differ between runs.
+**Check the results without a Jetson.** Every run's per-image answers and confidences are in `results/*.json`. To re-apply the threshold rule to the committed dev-set run without the model:
+
+```bash
+python benchmark/select_threshold.py --from-json results/threshold_probe_20261103_051705.json --no-config
+```
+
+Edge answers are deterministic (greedy decoding); Muse Spark answers can vary between runs.
+
+**Add your own ID format.** Tasks live in [`router/task_route.py`](router/task_route.py). To support another fixed ID scheme, add a task with its prompt, a threshold and a `format` pattern, as the `loco` task does; the router then keeps an answer on the device only if it matches the format and clears the threshold.
+
+### Repo layout
+
+```text
+router/       edge_model.py (on-device model), route.py (jersey router, offline queue, sync),
+              task_route.py (labels, locomotives, custom prompts), meta_client.py (Muse Spark, SAM 3.1)
+server/       app.py (dashboard API), static/index.html (dashboard page), feed.py (sends images)
+benchmark/    select_threshold.py, number_test.py, label_test.py, cloud_sam_test.py, ...
+data/         own/ (jerseys), numbers/ (locomotives), labels/ (labels): images, labels, rubrics, credits
+results/      every committed run
+config/       threshold.json (the frozen 0.80)
+docs/         README figures (PNG) and their sources (.mmd charts, figure script)
+```
 
 ---
 
-## Earlier comparison: a non-Meta edge model
+## Earlier comparison (non-Meta edge model)
 
-Until Nov 3 the on-device reader was **Qwen2.5-VL-3B-Instruct** (4-bit, llama.cpp). The organizers ruled that every model a project calls at runtime must be a Meta model, so it was replaced by Perception LM 1B. **Qwen is not part of the submitted project: no code in this branch calls it.** Its results are kept here, clearly separated, because they were run on the same licensed data under the same pre-registered rules, and the comparison is informative. The code that produced them is at git tag [`qwen-comparison`](https://github.com/TejasD-web/zero-training-edge-recognition/tree/qwen-comparison).
+Until Nov 3 the on-device reader was Qwen2.5-VL-3B-Instruct (4-bit, llama.cpp). The organizers ruled that every model a project calls at runtime must be a Meta model, so I switched to Perception LM 1B. **Qwen is not part of the submitted project, and no code in this branch calls it.** Its results are kept for comparison because they came from the same data and rules; the code is at git tag [`qwen-comparison`](https://github.com/TejasD-web/zero-training-edge-recognition/tree/qwen-comparison).
 
 | Same pipeline, same data | Qwen2.5-VL-3B (non-Meta, 4-bit) | **Perception LM 1B (Meta, bf16)** |
 | --- | --- | --- |
 | Dev: edge accuracy / chosen threshold | 6/15 / 0.85 | **13/15 / 0.80** |
-| Held-out: edge alone | 12/25 | **22/25** |
+| Held-out: edge only | 12/25 | **22/25** |
 | Held-out: router | 23/25 | **24/25** |
 | Held-out: answered on-device | 3/25 | **11/25** |
 | Held-out: confident errors | 1 | 1 |
 | Held-out: cloud calls | 22 | **14** |
-| Labels, pre-registered: edge / kept / after sync | 2/9 / 0 / 8/9 | 0/9 / 0 / 7/9 |
-| Warm on-device read | ~1.0 s | ~1.2 s |
+| Labels (first prompt): edge / kept / after sync | 2/9 / 0 / 8/9 | 0/9 / 0 / 7/9 |
 
-A smaller Meta model read jersey numbers far better and let the router keep nearly four times as many frames on-device. Qwen read a few more short label codes with the pre-registered prompt.
-
-Experiments run only with Qwen (exploratory, not repeated with Perception LM): cropping to the label first (Qwen grounding + SAM 2.1) lowered accuracy; with SAM 3.1 crops the edge read the three short label codes and failed every long one; a structured "code + one-line caption" prompt gave useful but unverifiable captions (13 of 27 pre-listed facts, 2 false statements, vs. Muse Spark's 25 of 27).
+The smaller Meta model read jersey numbers much better and let the router keep almost 4× as many frames on the device.
 
 ---
 
 ## Limits
 
-- **Small, hard-weighted test sets.** 25 held-out benchmark images and 9 label images; one image moves the held-out accuracy by 4 points. Treat the numbers as evidence of behavior, not precise rates.
-- **One confident error.** `wm_027` was kept at 0.908 ("14", truth 40). It would have been kept at 0.85 or 0.90 too; offline, a confident error can't be caught.
-- **Labels mostly need the cloud.** Perception LM 1B reads some short codes but not long tracking numbers, and the label threshold (weakest token ≥ 0.90) is strict for long strings: correct label reads scored 0.30–0.75, so none were kept.
-- **The cloud tier is good, not perfect.** Muse Spark gave different answers to the same images across runs; on sync it overwrote one correct edge answer (`wm_014`). The router has no way to check cloud answers.
-- **Custom prompts are uncalibrated.** Only the jersey threshold was chosen on a dev set; the label threshold was fixed in advance and tested on 9 images; custom prompts use a default.
-- **Research use only.** Perception LM 1B is released under the FAIR Noncommercial Research License, so this project is a research prototype, not a product. It reads labels and numbers; it does not control a vehicle or make safety decisions.
-
----
-
-## Related work
-
-- **Agreement-based cascades** (Kolawole, Dennis, Talwalkar and Smith, CMU, TMLR 2025): route between models based on whether cheap models agree.
-- **Edge-to-server VLM collaboration** (Song and Kim, POSTECH): escalate from an edge VLM to a server based on the edge model's own uncertainty.
-- **Onboard autonomy under constrained links** (NASA JPL's AEGIS, Estlin et al. 2010): Mars rovers select science targets themselves because waiting on Earth is the bottleneck.
-
-What this project adds: a working, training-free edge-to-cloud router built entirely on Meta models, with the reader on a real 8 GB device; an offline mode that answers immediately and verifies later; the same router across two reading tasks; and an evaluation with thresholds and rubrics fixed before testing.
+- **Small test sets.** 25 held-out jersey photos, 25 locomotive photos and 9 label photos; one photo moves a result by 4 points. Treat the numbers as evidence of behavior, not precise rates.
+- **The jersey threshold rests on one dev photo** (0.763). A different dev set could have given a different threshold.
+- **Confident errors get through without a format check.** `wm_027` was kept at 0.908 ("14", truth 40); offline, nothing can catch it.
+- **The format check needs a known format,** and a wrong number in the right format (the neighbouring locomotive's, say) still needs low confidence to be caught.
+- **Long codes are beyond the on-device model;** labels go to the cloud.
+- **The router trusts the cloud.** Muse Spark varies between runs, and on sync it overwrote correct edge answers twice (`wm_014`, `lo_001`).
+- **Custom prompts are uncalibrated;** only the jersey threshold was chosen on a dev set.
+- **Research use only.** Perception LM 1B is licensed for noncommercial research, so this is a prototype. It reads numbers; it doesn't control a vehicle or make safety decisions.
 
 ---
 
 ## Future work
 
-- **Check digits as a second on-device signal.** Many label formats carry their own checksum (EAN-13 barcodes, UPU tracking numbers like `EC…US`). Validating a read against its format offline, with no training and no cloud, would make label reads trustworthy far more often than token confidence alone.
-- A length-aware confidence rule for long codes, chosen on a fresh dev set of labels.
-- Run SAM 3 / SAM 3.1 on the Jetson with real weights and measure accuracy, not just speed.
-- A synthetic blur and angle sweep to map where the edge degrades and whether confidence tracks it.
-- A small fleet: several robots sharing one sync server, and a Dockerfile for the Jetson.
+- **Run on a robot:** mount the Jetson and camera on a mobile robot and feed live frames instead of photos.
+- **Don't blindly trust the cloud:** when the edge was fairly confident and the cloud disagrees, flag the frame instead of overwriting the edge answer.
+- **Format and check-digit rules for labels,** one per label type; many formats carry their own checksum (EAN-13 barcodes, UPU tracking numbers like `EC…US`), which the device could verify offline.
+- **A length-aware threshold for long codes,** chosen on a fresh dev set of labels.
+- **SAM 3 / 3.1 on the Jetson with real weights,** measuring accuracy, not just speed.
 
 ---
 
 ## About this project
 
-**Built during the hackathon (Oct 26 – Nov 4, 2026):** this repository and everything in it: the confidence router and its token-probability signal, the pre-registered evaluation on licensed data, offline mode and sync, the live dashboard with label and custom tasks, and every experiment in this README. On Nov 3, after the organizers' ruling on runtime models, the on-device reader was switched to Perception LM 1B and the dev selection, held-out run, offline/sync run and label test were rerun on it (see the commit history). **Before it:** the device environment (JetPack, a llama.cpp build serving Qwen2.5-VL-3B, and a SAM 2.1 install) and an Nsight profile of that baseline, from an earlier project.
+I built this during the hackathon (Oct 26 – Nov 4, 2026): the router, the evaluation, offline mode and sync, the dashboard, the SAM 2.1 setup, and every experiment here. The one thing that came before is the Jetson's base setup from an earlier project: JetPack, a llama.cpp build of Qwen2.5-VL-3B, and a profiling run of it. I first built and tested the router on that Qwen setup, then switched to Perception LM 1B and reran every test.
 
-Solo project. Built with AI assistance (Anthropic's Claude) for code drafting, debugging, research and writing. The design decisions, data collection and labeling, and every experiment were run, checked and committed by the author on the device.
+I used Claude (Anthropic) for help with code, debugging, research and writing. I made the design decisions, collected and labeled the data, and ran and committed every experiment on the device.
 
 ---
 
 ## Credits and licenses
 
-- **Perception LM 1B**: Meta, FAIR Noncommercial Research License ([license](https://huggingface.co/facebook/Perception-LM-1B/blob/main/LICENSE)); used here for noncommercial research. Cho et al., *PerceptionLM: Open-Access Data and Models for Detailed Visual Understanding*, 2025.
-- **Hugging Face transformers**: Apache 2.0.
-- **SAM 2.1**: Apache 2.0. **SAM 3**: SAM License (Meta).
-- **Muse Spark and SAM 3.1**: accessed through the Meta Model API under its terms.
+- **Perception LM 1B:** Meta, FAIR Noncommercial Research License ([license](https://huggingface.co/facebook/Perception-LM-1B/blob/main/LICENSE)); used for noncommercial research. Cho et al., *PerceptionLM: Open-Access Data and Models for Detailed Visual Understanding*, 2025.
+- **Hugging Face transformers:** Apache 2.0. **SAM 2.1:** Apache 2.0. **SAM 3:** SAM License (Meta). **Muse Spark and SAM 3.1:** Meta Model API terms.
 - **Earlier comparison only** (not part of the submitted project): Qwen2.5-VL-3B-Instruct under the Qwen RESEARCH LICENSE AGREEMENT, Copyright (c) Alibaba Cloud; llama.cpp (MIT).
-- **Images**: Wikimedia Commons, per [`data/own/ATTRIBUTION.md`](data/own/ATTRIBUTION.md); Pexels (Pexels License), credited in [`data/labels/RUBRIC.md`](data/labels/RUBRIC.md). Images were downloaded at reduced resolution and converted to JPEG where needed; no other edits except one crop noted in the rubric. Inclusion does not imply endorsement by the photographers or the people pictured.
+- **Images:** Wikimedia Commons (public domain, CC0, CC BY, CC BY-SA) and Pexels (Pexels License), credited per image in the files linked under [Results](#results). Images were downloaded at reduced resolution and converted to JPEG where needed; `lo_016` and one other photo (noted in its rubric) were cropped. The figure in [How it works](#an-example) is an annotated CC BY-SA 2.0 photo by Rob Newman, shared under the same license. Inclusion does not imply endorsement by the photographers or the people pictured.

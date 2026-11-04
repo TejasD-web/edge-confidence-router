@@ -1,0 +1,7 @@
+flowchart LR
+    A[Camera frame] --> B["Edge: Perception LM 1B (Meta)<br/>Jetson Orin Nano, ~1.2 s"]
+    B --> C{"Confident?"}
+    C -- yes --> D[Answer on-device]
+    C -- "no, link up" --> E["Muse Spark<br/>Meta Model API"]
+    C -- "no, link down" --> F["Answer now, flag as unverified,<br/>queue the frame"]
+    F -- link restored --> E
