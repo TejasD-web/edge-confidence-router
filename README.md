@@ -9,7 +9,7 @@ This project is an edge-to-cloud router for reading numbers and codes from image
 **Results in short.** On 25 locomotive photos, the router kept 9 numbers on the device, all 9 correct, with a format check catching the one confident mistake. On 25 held-out jersey photos it matched sending everything to the cloud (within noise) while answering 11 on the device. Long label codes are beyond the on-device model, so those go to the cloud.
 
 > Built for the Meta Global AI Developer Hackathon (indie developer track), Oct–Nov 2026.
-
+>
 > **Demo video (3 min):** https://www.youtube.com/watch?v=O0eQej4fx2o
 
 ---
