@@ -136,7 +136,7 @@ Looking back at the scores, a threshold around 0.70 would have kept the 2 best c
 
 **The memory problem.** On the Jetson, GPU memory comes out of system RAM, and allocations fail (`NvMap … error 12`) rather than free up the file cache. Two changes made the model load and run reliably: loading the weights straight onto the GPU (`device_map="cuda"`) instead of through the CPU, which briefly needs two copies; and evicting the weights file from the file cache after loading (`posix_fadvise`), so ~3 GB of cached pages don't block later GPU allocations.
 
-**Speed and memory.** Warm reads take **~1.2 s** at ~3.1 GB peak GPU memory (4 tiles of 448 px per image); loading takes ~9 s. Mean routed latency on the held-out set is ~4.2 s, mostly cloud calls.
+**Speed and memory.** Loading the model takes ~9–11 s. The first read after loading took ~4 s in the smoke test (one-time GPU warm-up); warm reads take ~1.2 s at ~3.1 GB peak GPU memory (4 tiles of 448 px per image). Mean routed latency on the held-out set is ~4.2 s, mostly cloud calls.
 
 ---
 
